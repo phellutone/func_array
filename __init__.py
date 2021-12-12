@@ -6,7 +6,7 @@ bl_info = {
     "location": "View3D > Sidebar > Tool Tab",
     "description": "functionally object array tool",
     "support": "TESTING",
-    "tracker_url": "",
+    "tracker_url": "https://github.com/phellutone/func_array/issues",
     "category": "Object"
 }
 
@@ -360,7 +360,7 @@ class OBJECT_PT_FuncArray(bpy.types.Panel):
     bl_region_type = "UI"
     bl_category = "Tool"
     bl_idname = "VIEW3D_PT_fcurve_wrapper"
-    bl_label = "FCurve Wrapper"
+    bl_label = "Func Array"
     bl_options = {'DEFAULT_CLOSED'}
     
     def draw(self, context):
