@@ -25,7 +25,7 @@ class FCurveWrapper(bpy.types.PropertyGroup):
             return (False, 'DUPLICATE')
         return (True, fixes[0])
     
-    def resolve(self):
+    def resolve(self) -> Union[bpy.types.FCurve, None]:
         res, dat = self.observe()
         if not res:
             if dat == 'INPUT':
@@ -40,17 +40,18 @@ class FCurveWrapper(bpy.types.PropertyGroup):
                 _, dat = self.observe()
             if dat == 'DUPLICATE':
                 return
+        return self.id.animation_data.drivers[dat]
     
-    def variable_update(self, id: bpy.types.ID, path: str):
-        res, dat = self.observe()
-        if not res:
-            return
-        fcurve = self.id.animation_data.drivers[dat]
-        driver = fcurve.driver
-        v1 = [v for v in driver.variables if v.type == 'SINGLE_PROP']
-        v2 = [v for v in v1 if v.targets[0].id == id]
-        v3 = [v for v in v2 if v.targets[0].data_path == path]
-        [v for v in driver.variables if v.targets[0].id == id and re.search('func_array\[\d+\].variables\[\d+\]', v.targets[0].data_path)]
+    # def variable_update(self, id: bpy.types.ID, path: str):
+    #     res, dat = self.observe()
+    #     if not res:
+    #         return
+    #     fcurve = self.id.animation_data.drivers[dat]
+    #     driver = fcurve.driver
+    #     v1 = [v for v in driver.variables if v.type == 'SINGLE_PROP']
+    #     v2 = [v for v in v1 if v.targets[0].id == id]
+    #     v3 = [v for v in v2 if v.targets[0].data_path == path]
+    #     [v for v in driver.variables if v.targets[0].id == id and re.search('func_array\[\d+\].variables\[\d+\]', v.targets[0].data_path)]
 
     def init(self, id: bpy.types.ID, path: str):
         res, dat = anim_index(id, path)
@@ -63,5 +64,5 @@ class FCurveWrapper(bpy.types.PropertyGroup):
         self.array_index = dat[-1][3] if isinstance(dat[-1][3], int) else 0
 
         res, dat = self.observe()
-        if res:
-            return
+        if not res:
+            
