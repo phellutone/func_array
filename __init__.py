@@ -17,98 +17,99 @@ else:
     pass
 
 import bpy
+from .utils import anim_index
 
-def anim_index(id, path):
-    def path_disassembly(path):
-        tmp = ''
-        res = []
-        sid = -1
-        for i, s in enumerate(path):
-            if sid != -1 and sid != i:
-                continue
-            sid = -1
-            if s == '[':
-                res.append(('path', tmp))
-                r, tmp = path_disassembly(path[i+1:])
-                sid = r+i
-                if len(tmp) > 1:
-                    res.append(('eval', tmp))
-                else:
-                    res.append(tmp[0])
-                tmp = ''
-            elif s == '.':
-                if tmp:
-                    res.append(('path', tmp))
-                tmp = ''
-            elif s == '"':
-                idx = path.find('"', i+1)
-                res.append(('str', path[i:idx+1]))
-                sid = idx+1
-                tmp = ''
-            elif s == ']':
-                if tmp.isdigit():
-                    res.append(('int', int(tmp)))
-                elif tmp:
-                    res.append(('path', tmp))
-                return i+2, res
-            else:
-                tmp += s
-        if tmp:
-            res.append(('path', tmp))
-        return res
+# def anim_index(id, path):
+#     def path_disassembly(path):
+#         tmp = ''
+#         res = []
+#         sid = -1
+#         for i, s in enumerate(path):
+#             if sid != -1 and sid != i:
+#                 continue
+#             sid = -1
+#             if s == '[':
+#                 res.append(('path', tmp))
+#                 r, tmp = path_disassembly(path[i+1:])
+#                 sid = r+i
+#                 if len(tmp) > 1:
+#                     res.append(('eval', tmp))
+#                 else:
+#                     res.append(tmp[0])
+#                 tmp = ''
+#             elif s == '.':
+#                 if tmp:
+#                     res.append(('path', tmp))
+#                 tmp = ''
+#             elif s == '"':
+#                 idx = path.find('"', i+1)
+#                 res.append(('str', path[i:idx+1]))
+#                 sid = idx+1
+#                 tmp = ''
+#             elif s == ']':
+#                 if tmp.isdigit():
+#                     res.append(('int', int(tmp)))
+#                 elif tmp:
+#                     res.append(('path', tmp))
+#                 return i+2, res
+#             else:
+#                 tmp += s
+#         if tmp:
+#             res.append(('path', tmp))
+#         return res
 
-    def path_assembly(id, path, resolve=True):
-        res = [(id.bl_rna, '', id, '')]
-        tmp = id
-        stmp = ''
-        f = True
-        for i, p in enumerate(path):
-            if p[0] == 'path':
-                e = p[1]
-                ev = ('' if f else '.')+e
-                f = False
-            elif p[0] in ('int', 'str'):
-                e = p[1]
-                ev = '['+str(e)+']'
-            else:
-                e = eval(path_assembly(id, p[1], False)[-1][1])
-                ev = '['+str(e)+']'
-            prop = None
-            if resolve:
-                try:
-                    prop = tmp.bl_rna.properties[e]
-                except Exception as _:
-                    prop = None
-                tmp = id.path_resolve(stmp+ev)
-            stmp = stmp+ev
-            res.append((prop, stmp, tmp, e))
-        return res
+#     def path_assembly(id, path, resolve=True):
+#         res = [(id.bl_rna, '', id, '')]
+#         tmp = id
+#         stmp = ''
+#         f = True
+#         for i, p in enumerate(path):
+#             if p[0] == 'path':
+#                 e = p[1]
+#                 ev = ('' if f else '.')+e
+#                 f = False
+#             elif p[0] in ('int', 'str'):
+#                 e = p[1]
+#                 ev = '['+str(e)+']'
+#             else:
+#                 e = eval(path_assembly(id, p[1], False)[-1][1])
+#                 ev = '['+str(e)+']'
+#             prop = None
+#             if resolve:
+#                 try:
+#                     prop = tmp.bl_rna.properties[e]
+#                 except Exception as _:
+#                     prop = None
+#                 tmp = id.path_resolve(stmp+ev)
+#             stmp = stmp+ev
+#             res.append((prop, stmp, tmp, e))
+#         return res
     
-    try:
-        pd = path_disassembly(path)
-        pa = path_assembly(id, pd)
-    except Exception as _:
-        return None
+#     try:
+#         pd = path_disassembly(path)
+#         pa = path_assembly(id, pd)
+#     except Exception as _:
+#         return None
 
-    # for p in pa:
-    #     print(p)
+#     # for p in pa:
+#     #     print(p)
 
-    prop, stmp, tmp, e = pa[-1]
-    if prop is None:
-        prop, stmp, _, _ = pa[-2]
-    if isinstance(prop, bpy.types.Property):
-        if not prop.is_animatable:
-            return (False, 'invalid: the property is not animatable')
-        if prop.is_readonly:
-            return (False, 'invalid: the property is readonly')
-        if prop.type in ('BOOL', 'INT', 'FLOAT'):
-            if prop.is_array:
-                if type(e) == int:
-                    return (True, pa)
-                else:
-                    return (False, 'invalid: set the array index of the property')
-        return (True, pa)
-    return (False, 'invalid: the property is not support')
+#     prop, stmp, tmp, e = pa[-1]
+#     if prop is None:
+#         prop, stmp, _, _ = pa[-2]
+#     if isinstance(prop, bpy.types.Property):
+#         if not prop.is_animatable:
+#             return (False, 'invalid: the property is not animatable')
+#         if prop.is_readonly:
+#             return (False, 'invalid: the property is readonly')
+#         if prop.type in ('BOOL', 'INT', 'FLOAT'):
+#             if prop.is_array:
+#                 if type(e) == int:
+#                     return (True, pa)
+#                 else:
+#                     return (False, 'invalid: set the array index of the property')
+#         return (True, pa)
+#     return (False, 'invalid: the property is not support')
 
 class FuncArrayVariable(bpy.types.PropertyGroup):
 
