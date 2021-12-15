@@ -1,15 +1,18 @@
 import bpy
-from .func_array import FuncArray
 from .utils import anim_index
 
-class FuncArrayVariable(bpy.types.PropertyGroup):
+if "FuncArray" in locals():
+    pass
+else:
+    from .func_array import *
 
+class FuncArrayVariable(bpy.types.PropertyGroup):
+    index: bpy.props.IntProperty()
     name: bpy.props.StringProperty()
     mute: bpy.props.BoolProperty()
 
     def to_update(self, context):
         self.to_id = None
-        self.to_path = ''
         c = eval('bpy.types.'+self.to_type)
         self.__class__.to_id = bpy.props.PointerProperty(type=c)
     to_type: bpy.props.EnumProperty(items=[
@@ -63,9 +66,8 @@ class FuncArrayVariable(bpy.types.PropertyGroup):
         ('CONST', 'Const', 'Float value', 'DOT',            1)
     ], default=0, update=from_update)
 
-    fid: bpy.props.PointerProperty(type=bpy.types.ID)
-    fpath: bpy.props.StringProperty()
-    fidx: bpy.props.IntProperty()
+    # fcurve: bpy.props.PointerProperty(type=FCurveWrapper)
+    # dvar: bpy.props.PointerProperty(type=DriverVariableWrapper)
 
     controller: bpy.props.FloatProperty()
 
@@ -76,12 +78,13 @@ class FUNCARRAY_OT_variable_add(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        farray: list[FuncArray] = context.scene.func_array
+        farray = context.scene.func_array
         index: int = context.scene.active_func_array_index
-        block: FuncArray = farray[index]
+        block = farray[index]
 
         varbk: FuncArrayVariable = block.variables.add()
         varbk.name = 'Variable '+str(len(block.variables))
+        varbk.index = len(block.variables)-1
         block.active_variable_index = len(block.variables)-1
         return {'FINISHED'}
 
@@ -92,19 +95,26 @@ class FUNCARRAY_OT_variable_remove(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        farray: list[FuncArray] = context.scene.func_array
+        farray = context.scene.func_array
         index: int = context.scene.active_func_array_index
-        block: FuncArray = farray[index]
+        block = farray[index]
+        varis: list[FuncArrayVariable] = block.variables
         varid: int = block.active_variable_index
 
-        if block.active_variable_index < 0 or not block.variables:
+        if varid < 0 or not varis:
             return {'CANCELLED'}
 
-        varbk: FuncArrayVariable = block.variables[block.active_variable_index]
+        varbk: FuncArrayVariable = varis[varid]
         varbk.to_id = None
 
-        block.variables.remove(block.active_variable_index)
-        block.active_variable_index = min(max(0, block.active_variable_index), len(block.variables)-1)
+        varis.remove(varid)
+
+        for b in varis:
+            if b.index < varid:
+                continue
+            b.index = b.index-1
+
+        block.active_variable_index = min(max(0, varid), len(varis)-1)
         return {'FINISHED'}
 
 class OBJECT_UL_FuncArrayVariable(bpy.types.UIList):
@@ -116,3 +126,69 @@ class OBJECT_UL_FuncArrayVariable(bpy.types.UIList):
         elif self.layout_type in {'GRID'}:
             layout.alignment = 'CENTER'
             layout.label(text='', icon=icon)
+
+class OBJECT_PT_FuncArrayVariable(bpy.types.Panel):
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "Tool"
+    bl_parent_id = "VIEW3D_PT_func_array"
+    bl_idname = "VIEW3D_PT_func_array_variable"
+    bl_label = "Func Array"
+    # bl_options = {'DEFAULT_CLOSED'}
+    
+    def draw(self, context):
+        scene = context.scene
+        layout = self.layout
+
+        if scene.func_array:
+            index = scene.active_func_array_index
+            block = scene.func_array[index]
+
+            row = layout.row()
+            row.template_list("OBJECT_UL_FuncArrayVariable", "", block, "variables", block, "active_variable_index", rows=3)
+            col = row.column(align=True)
+            col.operator("func_array.variable_add", icon="ADD", text="")
+            col.operator("func_array.variable_remove", icon="REMOVE", text="")
+
+            if block.variables:
+                varid = block.active_variable_index
+                varbk = block.variables[varid]
+
+                col = layout.column()
+                # col.operator("func_array.variable_update", text="update")
+
+                box = col.box().column()
+                box.label(text="Variable Input")
+                box.use_property_split = True
+                box.use_property_decorate = True
+                box.prop(varbk, "from_type", text="Type", expand=True)
+                box.prop(varbk, "controller", text="Controller")
+
+                box = col.box().column()
+                box.label(text="Variable Output")
+                box.template_any_ID(varbk, "to_id", "to_type", text="Prop:")
+                box.template_path_builder(varbk, "to_path", varbk.to_id, text="Path")
+                try:
+                    val = varbk.to_id.path_resolve(varbk.to_path)
+                    res, dat = anim_index(varbk.to_id, varbk.to_path)
+                    if not res:
+                        bbx = box.box().split(factor=1.0).column()
+                        bbx.alignment = 'RIGHT'
+                        bbx.label(text=str(val))
+                        box.label(text=dat)
+                    else:
+                        col = box.column()
+                        col.enabled = False
+                        col.active = False
+                        idx = -1 if dat[-1][0] is None else 0
+                        col.prop(dat[-2+idx][2], dat[-1+idx][3])
+                except Exception as _:
+                    box.label(text="invalid value")
+
+classes = (
+    FuncArrayVariable,
+    FUNCARRAY_OT_variable_add,
+    FUNCARRAY_OT_variable_remove,
+    OBJECT_UL_FuncArrayVariable,
+    OBJECT_PT_FuncArrayVariable
+)
