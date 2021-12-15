@@ -3,6 +3,20 @@ import re
 import bpy
 from .utils import anim_index
 
+class DriverVariableWrapper(bpy.types.PropertyGroup):
+    pointer: bpy.props.IntProperty()
+
+    def set(self, variable: bpy.types.DriverVariable):
+        if isinstance(variable, bpy.types.DriverVariable):
+            self.pointer = variable.as_pointer()
+    
+    def get(self, fcurve: bpy.types.FCurve):
+        if not isinstance(fcurve, bpy.types.FCurve):
+            return
+        v = [v for v in fcurve.driver.variables if v.as_pointer() == self.pointer]
+        if v:
+            return v[0]
+
 class FCurveWrapper(bpy.types.PropertyGroup):
     id: bpy.props.PointerProperty(type=bpy.types.ID)
     data_path: bpy.props.StringProperty()
@@ -41,17 +55,8 @@ class FCurveWrapper(bpy.types.PropertyGroup):
             if dat == 'DUPLICATE':
                 return
         return self.id.animation_data.drivers[dat]
-    
-    # def variable_update(self, id: bpy.types.ID, path: str):
-    #     res, dat = self.observe()
-    #     if not res:
-    #         return
-    #     fcurve = self.id.animation_data.drivers[dat]
-    #     driver = fcurve.driver
-    #     v1 = [v for v in driver.variables if v.type == 'SINGLE_PROP']
-    #     v2 = [v for v in v1 if v.targets[0].id == id]
-    #     v3 = [v for v in v2 if v.targets[0].data_path == path]
-    #     [v for v in driver.variables if v.targets[0].id == id and re.search('func_array\[\d+\].variables\[\d+\]', v.targets[0].data_path)]
+
+    def add_driver(self): ...
 
     def init(self, id: bpy.types.ID, path: str):
         res, dat = anim_index(id, path)
@@ -63,6 +68,10 @@ class FCurveWrapper(bpy.types.PropertyGroup):
         self.data_path = dat[-1+idx][1]
         self.array_index = dat[-1][3] if isinstance(dat[-1][3], int) else 0
 
-        res, dat = self.observe()
-        if not res:
-            
+        res = self.resolve()
+        if res is None:
+            self.id = None
+            self.data_path = ''
+            self.array_index = 0
+        
+        return res
