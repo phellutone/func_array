@@ -1,11 +1,6 @@
 import bpy
 from .utils import anim_index
 
-if "FuncArray" in locals():
-    pass
-else:
-    from .func_array import *
-
 class FuncArrayVariable(bpy.types.PropertyGroup):
     index: bpy.props.IntProperty()
     name: bpy.props.StringProperty()
