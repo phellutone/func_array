@@ -128,7 +128,7 @@ class OBJECT_PT_FuncArrayVariable(bpy.types.Panel):
     bl_category = "Tool"
     bl_parent_id = "VIEW3D_PT_func_array"
     bl_idname = "VIEW3D_PT_func_array_variable"
-    bl_label = "Func Array"
+    bl_label = "Variables"
     # bl_options = {'DEFAULT_CLOSED'}
     
     def draw(self, context):
