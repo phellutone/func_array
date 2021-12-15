@@ -123,12 +123,12 @@ class OBJECT_UL_FuncArrayVariable(bpy.types.UIList):
             layout.label(text='', icon=icon)
 
 class OBJECT_PT_FuncArrayVariable(bpy.types.Panel):
-    bl_space_type = "VIEW_3D"
-    bl_region_type = "UI"
-    bl_category = "Tool"
-    bl_parent_id = "VIEW3D_PT_func_array"
-    bl_idname = "VIEW3D_PT_func_array_variable"
-    bl_label = "Variables"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'Tool'
+    bl_parent_id = 'VIEW3D_PT_func_array'
+    bl_idname = 'VIEW3D_PT_func_array_variable'
+    bl_label = 'Variables'
     # bl_options = {'DEFAULT_CLOSED'}
     
     def draw(self, context):
@@ -140,29 +140,29 @@ class OBJECT_PT_FuncArrayVariable(bpy.types.Panel):
             block = scene.func_array[index]
 
             row = layout.row()
-            row.template_list("OBJECT_UL_FuncArrayVariable", "", block, "variables", block, "active_variable_index", rows=3)
+            row.template_list('OBJECT_UL_FuncArrayVariable', '', block, 'variables', block, 'active_variable_index', rows=3)
             col = row.column(align=True)
-            col.operator("func_array.variable_add", icon="ADD", text="")
-            col.operator("func_array.variable_remove", icon="REMOVE", text="")
+            col.operator('func_array.variable_add', icon='ADD', text='')
+            col.operator('func_array.variable_remove', icon='REMOVE', text='')
 
             if block.variables:
                 varid = block.active_variable_index
                 varbk = block.variables[varid]
 
                 col = layout.column()
-                # col.operator("func_array.variable_update", text="update")
+                # col.operator('func_array.variable_update', text='update')
 
                 box = col.box().column()
-                box.label(text="Variable Input")
+                box.label(text='Variable Input')
                 box.use_property_split = True
                 box.use_property_decorate = True
-                box.prop(varbk, "from_type", text="Type", expand=True)
-                box.prop(varbk, "controller", text="Controller")
+                box.prop(varbk, 'from_type', text='Type', expand=True)
+                box.prop(varbk, 'controller', text='Controller')
 
                 box = col.box().column()
-                box.label(text="Variable Output")
-                box.template_any_ID(varbk, "to_id", "to_type", text="Prop:")
-                box.template_path_builder(varbk, "to_path", varbk.to_id, text="Path")
+                box.label(text='Variable Output')
+                box.template_any_ID(varbk, 'to_id', 'to_type', text='Prop:')
+                box.template_path_builder(varbk, 'to_path', varbk.to_id, text='Path')
                 try:
                     val = varbk.to_id.path_resolve(varbk.to_path)
                     res, dat = anim_index(varbk.to_id, varbk.to_path)
@@ -178,7 +178,7 @@ class OBJECT_PT_FuncArrayVariable(bpy.types.Panel):
                         idx = -1 if dat[-1][0] is None else 0
                         col.prop(dat[-2+idx][2], dat[-1+idx][3])
                 except Exception as _:
-                    box.label(text="invalid value")
+                    box.label(text='invalid value')
 
 classes = (
     FuncArrayVariable,
