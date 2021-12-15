@@ -1,7 +1,13 @@
-from typing import Literal, Union
 import bpy
 
 class PathResolver:
+    #   id.data_path.prop_path[index]
+    # [  bpy_struct].[           str] layout
+    # [ID].[              str][  int] fcurve
+    # 
+    # id.path_resolve(data_path), prop_path+'['+index+']'
+    # id, data_path+'.'+prop_path, index
+
     def __init__(self, id: bpy.types.ID, path: str):
         if isinstance(id, bpy.types.ID) and not path == '':
             try:
@@ -17,6 +23,31 @@ class PathResolver:
         self.state = False
         return
     
+    def id_path_index(self):
+        if not self.state:
+            return None
+        
+        prop, _, _, e, t = self.graph[-1]
+        if t == 'int':
+            (self.graph[0][2], self.graph[-3][1], self.graph[-2][3], e)
+        elif t == 'path':
+            (self.graph[0][2], self.graph[-2][1], self.graph[-1][3], 0)
+        # if prop is None:
+        #     prop = self.graph[-2][0]
+        # if isinstance(prop, bpy.types.Property):
+        #     # if not prop.is_animatable:
+        #     #     return None
+        #     # if prop.is_readonly:
+        #     #     return None
+        #     if prop.type in ('BOOL', 'INT', 'FLOAT'):
+        #         if prop.is_array and type(e) is int:
+        #             if self.graph[-1][0] is None:
+        #                 return self.graph
+        #             else:
+        #                 return None
+        #     return self.graph
+        # return None
+
     def path_disassembly(self, path: str):
         tmp = ''
         res = []
@@ -56,7 +87,7 @@ class PathResolver:
         return res
 
     def path_assembly(self, id: bpy.types.ID, path: list, resolve=True):
-        res = [(None, '', id, '')]
+        res = [(None, '', id, '', '')]
         tmp = id
         stmp = ''
         f = True
@@ -72,14 +103,14 @@ class PathResolver:
                 e = eval(self.path_assembly(id, p[1], False)[-1][1])
                 ev = '['+str(e)+']'
             prop = None
+            stmp = stmp+ev
             if resolve:
                 try:
                     prop = tmp.bl_rna.properties[e]
                 except Exception as _:
                     prop = None
-                tmp = id.path_resolve(stmp+ev)
-            stmp = stmp+ev
-            res.append((prop, stmp, tmp, e))
+                tmp = id.path_resolve(stmp)
+            res.append((prop, stmp, tmp, e, p[0]))
         return res
 
 def anim_index(id: bpy.types.ID, path: str):
@@ -88,10 +119,12 @@ def anim_index(id: bpy.types.ID, path: str):
         return (False, 'invalid: could\'nt resolve the path')
     
     graph = pr.graph
+    # for p in graph:
+    #     print(p)
 
-    prop, stmp, tmp, e = graph[-1]
+    prop, stmp, tmp, e, _ = graph[-1]
     if prop is None:
-        prop, stmp, _, _ = graph[-2]
+        prop, stmp, _, _, _ = graph[-2]
     if isinstance(prop, bpy.types.Property):
         if not prop.is_animatable:
             return (False, 'invalid: the property is not animatable')
