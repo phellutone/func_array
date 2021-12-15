@@ -1,23 +1,23 @@
 
 bl_info = {
-    "name": "func array",
-    "author": "phellutone",
-    "version": (0, 0, 1),
-    "blender": (2, 93, 0),
-    "location": "View3D > Sidebar > Tool Tab",
-    "description": "functionally object array tool",
-    "support": "TESTING",
-    "tracker_url": "https://github.com/phellutone/func_array/issues",
-    "category": "Object"
+    'name': 'func array',
+    'author': 'phellutone',
+    'version': (0, 0, 1),
+    'blender': (2, 93, 0),
+    'location': 'View3D > Sidebar > Tool Tab',
+    'description': 'functionally object array tool',
+    'support': 'TESTING',
+    'tracker_url': 'https://github.com/phellutone/func_array/issues',
+    'category': 'Object'
 }
 
 
-if "bpy" in locals():
+if 'bpy' in locals():
     import imp
     imp.reload(func_array)
     imp.reload(func_array_variable)
 else:
-    from .func_array import FuncArray, FUNCARRAY_OT_add, FUNCARRAY_OT_remove, OBJECT_UL_FuncArray, OBJECT_PT_FuncArray
+    from .func_array import FuncArray, FUNCARRAY_OT_add, FUNCARRAY_OT_remove, FUNCARRAY_OT_activate, OBJECT_UL_FuncArray, OBJECT_PT_FuncArray
     from .func_array_variable import FuncArrayVariable, FUNCARRAY_OT_variable_add, FUNCARRAY_OT_variable_remove, OBJECT_UL_FuncArrayVariable, OBJECT_PT_FuncArrayVariable
 
 import bpy
@@ -27,6 +27,7 @@ classes = (
     FuncArray,
     FUNCARRAY_OT_add,
     FUNCARRAY_OT_remove,
+    FUNCARRAY_OT_activate,
     FUNCARRAY_OT_variable_add,
     FUNCARRAY_OT_variable_remove,
     OBJECT_UL_FuncArray,
