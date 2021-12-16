@@ -1,5 +1,6 @@
 import bpy
-from .func_array_variable import FuncArrayVariable
+from .func_array_variable import *
+from .handler import update
 
 class FuncArray(bpy.types.PropertyGroup):
     index: bpy.props.IntProperty()
@@ -88,13 +89,14 @@ class FUNCARRAY_OT_activate(bpy.types.Operator):
         ob = bpy.data.objects.new('FuncArrayDummy.'+block.target.name, me)
         block.eval_target = ob
 
-        co = bpy.data.collections.new('FuncArrayDummy.'+block.target.name)
-        co.objects.link(ob)
+        # co = bpy.data.collections.new('FuncArrayDummy.'+block.target.name)
+        # co.objects.link(ob)
 
-        obj = bpy.data.objects.new('FuncArray.'+block.target.name, None)
-        obj.instance_type = 'COLLECTION'
-        obj.instance_collection = co
-        context.scene.collection.objects.link(obj)
+        # obj = bpy.data.objects.new('FuncArray.'+block.target.name, None)
+        # obj.instance_type = 'COLLECTION'
+        # obj.instance_collection = co
+        # context.scene.collection.objects.link(obj)
+        context.scene.collection.objects.link(ob)
 
         block.is_activate = True
         return {'FINISHED'}
@@ -138,10 +140,33 @@ class OBJECT_PT_FuncArray(bpy.types.Panel):
 
 
 classes = (
+    FuncArrayVariable,
     FuncArray,
     FUNCARRAY_OT_add,
     FUNCARRAY_OT_remove,
     FUNCARRAY_OT_activate,
+    FUNCARRAY_OT_variable_add,
+    FUNCARRAY_OT_variable_remove,
     OBJECT_UL_FuncArray,
-    OBJECT_PT_FuncArray
+    OBJECT_UL_FuncArrayVariable,
+    OBJECT_PT_FuncArray,
+    OBJECT_PT_FuncArrayVariable
 )
+
+def register():
+    for cls in classes:
+        bpy.utils.register_class(cls)
+    
+    bpy.types.Scene.func_array = bpy.props.CollectionProperty(type=FuncArray)
+    bpy.types.Scene.active_func_array_index = bpy.props.IntProperty()
+    if not update in bpy.app.handlers.depsgraph_update_post:
+        bpy.app.handlers.depsgraph_update_post.append(update)
+
+def unregister():
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
+    
+    del bpy.types.Scene.func_array
+    del bpy.types.Scene.active_func_array_index
+    if update in bpy.app.handlers.depsgraph_update_post:
+        bpy.app.handlers.depsgraph_update_post.remove(update)
