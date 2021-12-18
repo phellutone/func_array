@@ -1,6 +1,6 @@
 import bpy
 from .func_array_variable import *
-from .handler import update
+from .handler import deform_update
 
 class FuncArray(bpy.types.PropertyGroup):
     index: bpy.props.IntProperty()
@@ -159,8 +159,8 @@ def register():
     
     bpy.types.Scene.func_array = bpy.props.CollectionProperty(type=FuncArray)
     bpy.types.Scene.active_func_array_index = bpy.props.IntProperty()
-    if not update in bpy.app.handlers.depsgraph_update_post:
-        bpy.app.handlers.depsgraph_update_post.append(update)
+    if not deform_update in bpy.app.handlers.depsgraph_update_post:
+        bpy.app.handlers.depsgraph_update_post.append(deform_update)
 
 def unregister():
     for cls in classes:
@@ -168,5 +168,5 @@ def unregister():
     
     del bpy.types.Scene.func_array
     del bpy.types.Scene.active_func_array_index
-    if update in bpy.app.handlers.depsgraph_update_post:
-        bpy.app.handlers.depsgraph_update_post.remove(update)
+    if deform_update in bpy.app.handlers.depsgraph_update_post:
+        bpy.app.handlers.depsgraph_update_post.remove(deform_update)
