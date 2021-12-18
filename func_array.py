@@ -1,6 +1,6 @@
 import bpy
-from .func_array_variable import *
-from .handler import deform_update
+# from .func_array_variable import *
+# from .handler import deform_update
 
 class FuncArray(bpy.types.PropertyGroup):
     index: bpy.props.IntProperty()
@@ -23,8 +23,15 @@ class FuncArray(bpy.types.PropertyGroup):
         soft_max=25
     )
 
-    variables: bpy.props.CollectionProperty(type=FuncArrayVariable)
-    active_variable_index: bpy.props.IntProperty()
+    # variables: bpy.props.CollectionProperty(type=FuncArrayVariable)
+    # active_variable_index: bpy.props.IntProperty()
+
+    controller: bpy.props.FloatProperty()
+    ctr_max: bpy.props.FloatProperty(default=0.0)
+    ctr_min: bpy.props.FloatProperty(default=1.0)
+
+    trg_co: bpy.props.PointerProperty(type=bpy.types.Collection)
+    trg_ob: bpy.props.PointerProperty(type=bpy.types.Object)
 
 class FUNCARRAY_OT_add(bpy.types.Operator):
     bl_idname = 'func_array.add'
@@ -40,7 +47,7 @@ class FUNCARRAY_OT_add(bpy.types.Operator):
         block.index = len(farray)-1
         context.scene.active_func_array_index = len(farray)-1
 
-        bpy.ops.func_array.variable_add()
+        # bpy.ops.func_array.variable_add()
         return {'FINISHED'}
 
 class FUNCARRAY_OT_remove(bpy.types.Operator):
@@ -89,16 +96,50 @@ class FUNCARRAY_OT_activate(bpy.types.Operator):
         ob = bpy.data.objects.new('FuncArrayDummy.'+block.target.name, me)
         block.eval_target = ob
 
-        # co = bpy.data.collections.new('FuncArrayDummy.'+block.target.name)
-        # co.objects.link(ob)
+        co = bpy.data.collections.new('FuncArrayDummy.'+block.target.name)
+        block.trg_co = co
+        co.objects.link(ob)
 
-        # obj = bpy.data.objects.new('FuncArray.'+block.target.name, None)
-        # obj.instance_type = 'COLLECTION'
-        # obj.instance_collection = co
-        # context.scene.collection.objects.link(obj)
-        context.scene.collection.objects.link(ob)
+        obj = bpy.data.objects.new('FuncArray.'+block.target.name, None)
+        obj.instance_type = 'COLLECTION'
+        obj.instance_collection = co
+        block.trg_ob = obj
+        context.scene.collection.objects.link(obj)
+        # context.scene.collection.objects.link(ob)
 
         block.is_activate = True
+        return {'FINISHED'}
+
+class FUNCARRAY_OT_deactivate(bpy.types.Operator):
+    bl_idname = 'func_array.deactivate'
+    bl_label = 'deactivate'
+    bl_description = ''
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        farray: list[FuncArray] = context.scene.func_array
+        index: int = context.scene.active_func_array_index
+        if index < 0 or not farray:
+            return {'CANCELLED'}
+
+        block: FuncArray = farray[index]
+        if not block.is_activate:
+            return {'CANCELLED'}
+        if block.target is None:
+            return {'CANCELLED'}
+
+        ob = block.eval_target
+        me = block.eval_target.data
+        bpy.data.objects.remove(ob)
+        bpy.data.meshes.remove(me)
+
+        ob = block.trg_ob
+        bpy.data.objects.remove(ob)
+
+        co = block.trg_co
+        bpy.data.collections.remove(co)
+
+        block.is_activate = False
         return {'FINISHED'}
 
 class OBJECT_UL_FuncArray(bpy.types.UIList):
@@ -134,23 +175,34 @@ class OBJECT_PT_FuncArray(bpy.types.Panel):
             block = scene.func_array[index]
 
             col = layout.column()
+
+            row = col.row()
+            row.operator('func_array.activate')
+            row.operator('func_array.deactivate')
+
             col.prop(block, 'target', text='Target')
             col.prop(block, 'count', text='Count')
-            col.operator('func_array.activate')
+
+            box = col.box().column()
+            row = box.row(align=True)
+            row.prop(block, 'ctr_max', text='max')
+            row.prop(block, 'ctr_min', text='min')
+            box.prop(block, 'controller')
 
 
 classes = (
-    FuncArrayVariable,
+    # FuncArrayVariable,
     FuncArray,
     FUNCARRAY_OT_add,
     FUNCARRAY_OT_remove,
     FUNCARRAY_OT_activate,
-    FUNCARRAY_OT_variable_add,
-    FUNCARRAY_OT_variable_remove,
+    FUNCARRAY_OT_deactivate,
+    # FUNCARRAY_OT_variable_add,
+    # FUNCARRAY_OT_variable_remove,
     OBJECT_UL_FuncArray,
-    OBJECT_UL_FuncArrayVariable,
+    # OBJECT_UL_FuncArrayVariable,
     OBJECT_PT_FuncArray,
-    OBJECT_PT_FuncArrayVariable
+    # OBJECT_PT_FuncArrayVariable
 )
 
 def register():
@@ -159,8 +211,8 @@ def register():
     
     bpy.types.Scene.func_array = bpy.props.CollectionProperty(type=FuncArray)
     bpy.types.Scene.active_func_array_index = bpy.props.IntProperty()
-    if not deform_update in bpy.app.handlers.depsgraph_update_post:
-        bpy.app.handlers.depsgraph_update_post.append(deform_update)
+    # if not deform_update in bpy.app.handlers.depsgraph_update_post:
+    #     bpy.app.handlers.depsgraph_update_post.append(deform_update)
 
 def unregister():
     for cls in classes:
@@ -168,5 +220,5 @@ def unregister():
     
     del bpy.types.Scene.func_array
     del bpy.types.Scene.active_func_array_index
-    if deform_update in bpy.app.handlers.depsgraph_update_post:
-        bpy.app.handlers.depsgraph_update_post.remove(deform_update)
+    # if deform_update in bpy.app.handlers.depsgraph_update_post:
+    #     bpy.app.handlers.depsgraph_update_post.remove(deform_update)
