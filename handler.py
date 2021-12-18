@@ -1,7 +1,5 @@
 import bpy
 import bmesh
-from .func_array_variable import FuncArrayVariable
-from .func_array import FuncArray
 
 FUNCARRAY_UPDATE_LOCK = False
 
@@ -12,7 +10,7 @@ def evaluate(depsgraph, obj, bm):
     bm.from_mesh(me)
     bpy.data.meshes.remove(me)
 
-def dup(target: bpy.types.Object, count: int, eval_mesh: bpy.types.Mesh, variables: list[FuncArrayVariable]):
+def dup(scene, target, count, eval_mesh, variables):
     obj = target.copy()
     bpy.context.scene.collection.objects.link(obj)
     bm = bmesh.new()
@@ -22,14 +20,16 @@ def dup(target: bpy.types.Object, count: int, eval_mesh: bpy.types.Mesh, variabl
     for i in range(count):
         for v in variables:
             v.controller = i/(count-1)
-        depsgraph = bpy.context.evaluated_depsgraph_get()
+        depsgraph = scene.view_layers[0].depsgraph
+        depsgraph.update()
         evaluate(depsgraph, obj, bm)
     
     bpy.data.objects.remove(obj)
     bm.to_mesh(eval_mesh)
     bm.free()
 
-def update(scene, depsgraph):
+@bpy.app.handlers.persistent
+def deform_update(scene, depsgraph):
     global FUNCARRAY_UPDATE_LOCK
     if FUNCARRAY_UPDATE_LOCK:
         return
@@ -38,8 +38,8 @@ def update(scene, depsgraph):
     if not ids:
         return
     
-    farray: list[FuncArray] = scene.func_array
-    index: int = scene.active_func_array_index
+    farray = scene.func_array
+    index = scene.active_func_array_index
     if not farray or index < 0:
         return
     
@@ -58,11 +58,11 @@ def update(scene, depsgraph):
             continue
         target = targets[0]
 
-        varis: list[FuncArrayVariable] = block.variables
-        varid: int = block.active_variable_index
+        varis = block.variables
+        varid = block.active_variable_index
         if not varis or varid < 0:
             continue
 
-        dup(target, block.count, eval_mesh, block.variables)
+        dup(scene, target, block.count, eval_mesh, block.variables)
 
     FUNCARRAY_UPDATE_LOCK = False
