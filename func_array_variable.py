@@ -173,8 +173,8 @@ class OBJECT_PT_FuncArrayVariable(bpy.types.Panel):
                         box.label(text=dat)
                     else:
                         col = box.column()
-                        col.enabled = False
-                        col.active = False
+                        # col.enabled = False
+                        # col.active = False
                         idx = -1 if dat[-1][0] is None else 0
                         col.prop(dat[-2+idx][2], dat[-1+idx][3])
                 except Exception as _:
