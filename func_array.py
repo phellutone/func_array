@@ -6,16 +6,15 @@ class FuncArray(bpy.types.PropertyGroup):
     index: bpy.props.IntProperty()
     name: bpy.props.StringProperty()
     mute: bpy.props.BoolProperty()
+
     is_activate: bpy.props.BoolProperty()
+    is_evaluated: bpy.props.BoolProperty()
 
     target: bpy.props.PointerProperty(
         type=bpy.types.Object,
         poll=lambda self, object: object.type == 'MESH'
     )
-    eval_target: bpy.props.PointerProperty(
-        type=bpy.types.Object,
-        poll=lambda self, object: object.type == 'MESH'
-    )
+    eval_target: bpy.props.PointerProperty(type=bpy.types.Object)
 
     count: bpy.props.IntProperty(
         min=1,
@@ -80,7 +79,21 @@ class FUNCARRAY_OT_activate(bpy.types.Operator):
     bl_description = ''
     bl_options = {'REGISTER', 'UNDO'}
 
+    def modal(self, context, event):
+        """
+        is_evaluated: False -> True
+        """
+        
+        farray = context.scene.func_array
+        index = context.scene.active_func_array_index
+        if index < 0 or not farray:
+            return
+
     def execute(self, context):
+        """
+        is_activate: False -> True
+        """
+
         farray: list[FuncArray] = context.scene.func_array
         index: int = context.scene.active_func_array_index
         if index < 0 or not farray:
@@ -117,6 +130,10 @@ class FUNCARRAY_OT_deactivate(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
+        """
+        is_activate: Ture -> False
+        """
+
         farray: list[FuncArray] = context.scene.func_array
         index: int = context.scene.active_func_array_index
         if index < 0 or not farray:
@@ -180,10 +197,12 @@ class OBJECT_PT_FuncArray(bpy.types.Panel):
             row.operator('func_array.activate')
             row.operator('func_array.deactivate')
 
-            col.prop(block, 'target', text='Target')
-            col.prop(block, 'count', text='Count')
-
             box = col.box().column()
+            box.enabled = not block.is_activate
+            box.prop(block, 'target', text='Target')
+            box.prop(block, 'count', text='Count')
+
+            # box = col.box().column()
             row = box.row(align=True)
             row.prop(block, 'ctr_max', text='max')
             row.prop(block, 'ctr_min', text='min')
