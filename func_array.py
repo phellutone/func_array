@@ -2,6 +2,13 @@ import bpy
 # from .func_array_variable import *
 # from .handler import deform_update
 
+class FuncArrayObject(bpy.types.PropertyGroup):
+    index: bpy.props.IntProperty()
+    is_activate: bpy.props.BoolProperty()
+    is_computing: bpy.props.BoolProperty()
+    is_evaluated: bpy.props.BoolProperty()
+    object: bpy.props.PointerProperty(type=bpy.types.Object)
+
 class FuncArray(bpy.types.PropertyGroup):
     index: bpy.props.IntProperty()
     name: bpy.props.StringProperty()
@@ -14,7 +21,7 @@ class FuncArray(bpy.types.PropertyGroup):
         type=bpy.types.Object,
         poll=lambda self, object: object.type == 'MESH'
     )
-    eval_target: bpy.props.PointerProperty(type=bpy.types.Object)
+    eval_targets: bpy.props.PointerProperty(type=FuncArrayObject)
 
     count: bpy.props.IntProperty(
         min=1,
@@ -105,13 +112,24 @@ class FUNCARRAY_OT_activate(bpy.types.Operator):
         if block.target is None:
             return {'CANCELLED'}
         
-        me = bpy.data.meshes.new('FuncArrayDummy.'+block.target.name)
-        ob = bpy.data.objects.new('FuncArrayDummy.'+block.target.name, me)
-        block.eval_target = ob
-
         co = bpy.data.collections.new('FuncArrayDummy.'+block.target.name)
         block.trg_co = co
-        co.objects.link(ob)
+
+        if len(block.eval_targets) > block.count:
+            for i in reversed(range(block.count, len(block.eval_targets))):
+                e = block.eval_targets[i]
+                ob = e.object
+                me = e.object.data
+                bpy.data.objects.remove(ob)
+                bpy.data.meshes.remove(me)
+                block.eval_targets.remove(i)
+        elif len(block.eval_targets) < block.count:
+            for i in range(block.count-len(block.eval_targets)):
+                e: FuncArrayObject = block.eval_targets.add()
+                me = bpy.data.meshes.new('FuncArrayDummy.'+block.target.name+str(i))
+                ob = bpy.data.objects.new('FuncArrayDummy.'+block.target.name+str(i), me)
+                e.object = ob
+                co.objects.link(ob)
 
         obj = bpy.data.objects.new('FuncArray.'+block.target.name, None)
         obj.instance_type = 'COLLECTION'
