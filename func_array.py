@@ -1,6 +1,7 @@
 import bpy
-# from .func_array_variable import *
-# from .handler import deform_update
+from .handler import deform_update
+
+
 
 class FuncArrayObject(bpy.types.PropertyGroup):
     index: bpy.props.IntProperty()
@@ -12,7 +13,7 @@ class FuncArrayObject(bpy.types.PropertyGroup):
 class FuncArray(bpy.types.PropertyGroup):
     index: bpy.props.IntProperty()
     name: bpy.props.StringProperty()
-    mute: bpy.props.BoolProperty()
+    mute: bpy.props.BoolProperty(default=False)
 
     is_activate: bpy.props.BoolProperty()
     is_evaluated: bpy.props.BoolProperty()
@@ -21,7 +22,7 @@ class FuncArray(bpy.types.PropertyGroup):
         type=bpy.types.Object,
         poll=lambda self, object: object.type == 'MESH'
     )
-    eval_targets: bpy.props.PointerProperty(type=FuncArrayObject)
+    eval_targets: bpy.props.CollectionProperty(type=FuncArrayObject)
 
     count: bpy.props.IntProperty(
         min=1,
@@ -29,15 +30,29 @@ class FuncArray(bpy.types.PropertyGroup):
         soft_max=25
     )
 
-    # variables: bpy.props.CollectionProperty(type=FuncArrayVariable)
-    # active_variable_index: bpy.props.IntProperty()
-
     controller: bpy.props.FloatProperty()
-    ctr_max: bpy.props.FloatProperty(default=0.0)
-    ctr_min: bpy.props.FloatProperty(default=1.0)
+    ctr_max: bpy.props.FloatProperty(default=1.0)
+    ctr_min: bpy.props.FloatProperty(default=0.0)
 
     trg_co: bpy.props.PointerProperty(type=bpy.types.Collection)
     trg_ob: bpy.props.PointerProperty(type=bpy.types.Object)
+
+def eval_obj_init(block: FuncArray, count: int, co: bpy.types.Collection):
+    if len(block.eval_targets) > count:
+        for i in reversed(range(count, len(block.eval_targets))):
+            e = block.eval_targets[i]
+            ob = e.object
+            me = e.object.data
+            bpy.data.objects.remove(ob)
+            bpy.data.meshes.remove(me)
+            block.eval_targets.remove(i)
+    elif len(block.eval_targets) < count:
+        for i in range(count-len(block.eval_targets)):
+            e: FuncArrayObject = block.eval_targets.add()
+            me = bpy.data.meshes.new('FuncArrayDummy.'+block.target.name+'.'+str(i))
+            ob = bpy.data.objects.new('FuncArrayDummy.'+block.target.name+'.'+str(i), me)
+            e.object = ob
+            co.objects.link(ob)
 
 class FUNCARRAY_OT_add(bpy.types.Operator):
     bl_idname = 'func_array.add'
@@ -53,7 +68,6 @@ class FUNCARRAY_OT_add(bpy.types.Operator):
         block.index = len(farray)-1
         context.scene.active_func_array_index = len(farray)-1
 
-        # bpy.ops.func_array.variable_add()
         return {'FINISHED'}
 
 class FUNCARRAY_OT_remove(bpy.types.Operator):
@@ -80,76 +94,42 @@ class FUNCARRAY_OT_remove(bpy.types.Operator):
         context.scene.active_func_array_index = min(max(0, index), len(farray)-1)
         return {'FINISHED'}
 
-class FUNCARRAY_OT_activate(bpy.types.Operator):
-    bl_idname = 'func_array.activate'
-    bl_label = 'activate'
+class FUNCARRAY_OT_activation(bpy.types.Operator):
+    bl_idname = 'func_array.activation'
+    bl_label = 'activation'
     bl_description = ''
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {'REGISTER'}
+
+    _timer = None
 
     def modal(self, context, event):
         """
         is_evaluated: False -> True
         """
         
-        farray = context.scene.func_array
-        index = context.scene.active_func_array_index
-        if index < 0 or not farray:
-            return
-
-    def execute(self, context):
-        """
-        is_activate: False -> True
-        """
-
         farray: list[FuncArray] = context.scene.func_array
         index: int = context.scene.active_func_array_index
         if index < 0 or not farray:
-            return {'CANCELLED'}
-
-        block: FuncArray = farray[index]
-        if block.is_activate:
-            return {'CANCELLED'}
-        if block.target is None:
-            return {'CANCELLED'}
+            return {'PASS_THROUGH'}
         
-        co = bpy.data.collections.new('FuncArrayDummy.'+block.target.name)
-        block.trg_co = co
+        for block in farray:
+            if not block.is_activate:
+                continue
 
-        if len(block.eval_targets) > block.count:
-            for i in reversed(range(block.count, len(block.eval_targets))):
-                e = block.eval_targets[i]
-                ob = e.object
-                me = e.object.data
-                bpy.data.objects.remove(ob)
-                bpy.data.meshes.remove(me)
-                block.eval_targets.remove(i)
-        elif len(block.eval_targets) < block.count:
-            for i in range(block.count-len(block.eval_targets)):
-                e: FuncArrayObject = block.eval_targets.add()
-                me = bpy.data.meshes.new('FuncArrayDummy.'+block.target.name+str(i))
-                ob = bpy.data.objects.new('FuncArrayDummy.'+block.target.name+str(i), me)
-                e.object = ob
-                co.objects.link(ob)
+            if block.is_evaluated:
+                continue
 
-        obj = bpy.data.objects.new('FuncArray.'+block.target.name, None)
-        obj.instance_type = 'COLLECTION'
-        obj.instance_collection = co
-        block.trg_ob = obj
-        context.scene.collection.objects.link(obj)
-        # context.scene.collection.objects.link(ob)
+            if block.mute:
+                continue
 
-        block.is_activate = True
-        return {'FINISHED'}
+            print('execution')
+            block.is_evaluated = True
 
-class FUNCARRAY_OT_deactivate(bpy.types.Operator):
-    bl_idname = 'func_array.deactivate'
-    bl_label = 'deactivate'
-    bl_description = ''
-    bl_options = {'REGISTER', 'UNDO'}
+        return {'PASS_THROUGH'}
 
     def execute(self, context):
         """
-        is_activate: Ture -> False
+        is_activate: toggle
         """
 
         farray: list[FuncArray] = context.scene.func_array
@@ -158,24 +138,44 @@ class FUNCARRAY_OT_deactivate(bpy.types.Operator):
             return {'CANCELLED'}
 
         block: FuncArray = farray[index]
-        if not block.is_activate:
-            return {'CANCELLED'}
-        if block.target is None:
-            return {'CANCELLED'}
 
-        ob = block.eval_target
-        me = block.eval_target.data
-        bpy.data.objects.remove(ob)
-        bpy.data.meshes.remove(me)
+        if block.is_activate:
+            ob = block.trg_ob
+            bpy.data.objects.remove(ob)
 
-        ob = block.trg_ob
-        bpy.data.objects.remove(ob)
+            co = block.trg_co
+            eval_obj_init(block, 0, co)
+            bpy.data.collections.remove(co)
 
-        co = block.trg_co
-        bpy.data.collections.remove(co)
+            if self._timer is not None:
+                wm = context.window_manager
+                wm.event_timer_remove(self._timer)
+                self._timer = None
 
-        block.is_activate = False
-        return {'FINISHED'}
+            block.is_activate = False
+            return {'FINISHED'}
+        else:
+            if block.target is None:
+                return {'CANCELLED'}
+            
+            co = bpy.data.collections.new('FuncArrayDummy.'+block.target.name)
+            block.trg_co = co
+
+            eval_obj_init(block, block.count, co)
+
+            obj = bpy.data.objects.new('FuncArray.'+block.target.name, None)
+            obj.instance_type = 'COLLECTION'
+            obj.instance_collection = co
+            block.trg_ob = obj
+            context.scene.collection.objects.link(obj)
+
+            if self._timer is None:
+                wm = context.window_manager
+                self._timer = wm.event_timer_add(0.05, window=context.window)
+                wm.modal_handler_add(self)
+
+            block.is_activate = True
+            return {'RUNNING_MODAL'}
 
 class OBJECT_UL_FuncArray(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
@@ -206,21 +206,22 @@ class OBJECT_PT_FuncArray(bpy.types.Panel):
         col.operator('func_array.remove', icon='REMOVE', text='')
 
         if scene.func_array:
-            index = scene.active_func_array_index
-            block = scene.func_array[index]
+            index: int = scene.active_func_array_index
+            block: FuncArray = scene.func_array[index]
 
             col = layout.column()
 
             row = col.row()
-            row.operator('func_array.activate')
-            row.operator('func_array.deactivate')
+            if block.is_activate:
+                row.operator('func_array.activation', text='deactivate', icon='PAUSE')
+            else:
+                row.operator('func_array.activation', text='activate', icon='PLAY')
 
             box = col.box().column()
             box.enabled = not block.is_activate
             box.prop(block, 'target', text='Target')
             box.prop(block, 'count', text='Count')
 
-            # box = col.box().column()
             row = box.row(align=True)
             row.prop(block, 'ctr_max', text='max')
             row.prop(block, 'ctr_min', text='min')
@@ -228,18 +229,13 @@ class OBJECT_PT_FuncArray(bpy.types.Panel):
 
 
 classes = (
-    # FuncArrayVariable,
+    FuncArrayObject,
     FuncArray,
     FUNCARRAY_OT_add,
     FUNCARRAY_OT_remove,
-    FUNCARRAY_OT_activate,
-    FUNCARRAY_OT_deactivate,
-    # FUNCARRAY_OT_variable_add,
-    # FUNCARRAY_OT_variable_remove,
+    FUNCARRAY_OT_activation,
     OBJECT_UL_FuncArray,
-    # OBJECT_UL_FuncArrayVariable,
     OBJECT_PT_FuncArray,
-    # OBJECT_PT_FuncArrayVariable
 )
 
 def register():
@@ -248,8 +244,8 @@ def register():
     
     bpy.types.Scene.func_array = bpy.props.CollectionProperty(type=FuncArray)
     bpy.types.Scene.active_func_array_index = bpy.props.IntProperty()
-    # if not deform_update in bpy.app.handlers.depsgraph_update_post:
-    #     bpy.app.handlers.depsgraph_update_post.append(deform_update)
+    if not deform_update in bpy.app.handlers.depsgraph_update_post:
+        bpy.app.handlers.depsgraph_update_post.append(deform_update)
 
 def unregister():
     for cls in classes:
@@ -257,5 +253,5 @@ def unregister():
     
     del bpy.types.Scene.func_array
     del bpy.types.Scene.active_func_array_index
-    # if deform_update in bpy.app.handlers.depsgraph_update_post:
-    #     bpy.app.handlers.depsgraph_update_post.remove(deform_update)
+    if deform_update in bpy.app.handlers.depsgraph_update_post:
+        bpy.app.handlers.depsgraph_update_post.remove(deform_update)
