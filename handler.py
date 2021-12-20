@@ -49,20 +49,13 @@ def deform_update(scene, depsgraph):
         if not block.is_activate:
             continue
 
-        if block.target is None or block.eval_target is None:
+        if not block.is_evaluated:
             continue
-        eval_mesh = block.eval_target.data
 
         targets = [id for id in ids if id.original == block.target]
         if not targets:
             continue
-        target = targets[0]
 
-        varis = block.variables
-        varid = block.active_variable_index
-        if not varis or varid < 0:
-            continue
-
-        dup(scene, target, block.count, eval_mesh, block.variables)
+        block.is_evaluated = False
 
     FUNCARRAY_UPDATE_LOCK = False
