@@ -8,7 +8,7 @@ def deform_update(scene, depsgraph):
     if FUNCARRAY_UPDATE_LOCK:
         return
 
-    ids = [u.id for u in depsgraph.updates if isinstance(u.id, bpy.types.Object)]
+    ids = [u.id.original for u in depsgraph.updates if isinstance(u.id, bpy.types.Object)]
     if not ids:
         return
     
@@ -29,8 +29,7 @@ def deform_update(scene, depsgraph):
         if block.lock:
             continue
 
-        targets = [id for id in ids if id.original == block.target]
-        if not targets:
+        if not block.target in ids:
             continue
 
         block.is_evaluated = False
