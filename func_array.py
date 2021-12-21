@@ -1,3 +1,4 @@
+from types import CellType
 import bpy
 import bmesh
 from .handler import deform_update
@@ -18,6 +19,7 @@ class FuncArray(bpy.types.PropertyGroup):
 
     is_activate: bpy.props.BoolProperty()
     is_evaluated: bpy.props.BoolProperty()
+    lock: bpy.props.BoolProperty()
 
     target: bpy.props.PointerProperty(
         type=bpy.types.Object,
@@ -122,7 +124,8 @@ class FUNCARRAY_OT_activation(bpy.types.Operator):
 
             if block.mute:
                 continue
-
+            
+            block.lock = True
             eval_obj_init(block, block.count, block.trg_co)
 
             ob = block.target.copy()
@@ -133,7 +136,10 @@ class FUNCARRAY_OT_activation(bpy.types.Operator):
                 bm.from_mesh(eval_mesh)
                 bm.clear()
 
-                block.controller = i/(block.count-1)
+                if block.count == 1:
+                    block.controller = block.ctr_min
+                else:
+                    block.controller = i/(block.count-1)*(block.ctr_max-block.ctr_min)+block.ctr_min
                 depsgraph = context.evaluated_depsgraph_get()
                 eval_obj = ob.evaluated_get(depsgraph)
                 me = bpy.data.meshes.new_from_object(eval_obj)
@@ -146,6 +152,7 @@ class FUNCARRAY_OT_activation(bpy.types.Operator):
             bpy.data.objects.remove(ob)
 
             block.is_evaluated = True
+            block.lock = False
 
         return {'PASS_THROUGH'}
 
@@ -240,14 +247,17 @@ class OBJECT_PT_FuncArray(bpy.types.Panel):
                 row.operator('func_array.activation', text='activate', icon='PLAY')
 
             box = col.box().column()
-            box.enabled = not block.is_activate
-            box.prop(block, 'target', text='Target')
+            # box.enabled = not block.is_activate
+            boc = box.column()
+            boc.enabled = not block.is_activate
+            boc.prop(block, 'target', text='Target')
             box.prop(block, 'count', text='Count')
 
             row = box.row(align=True)
             row.prop(block, 'ctr_max', text='max')
             row.prop(block, 'ctr_min', text='min')
-            box.prop(block, 'controller')
+
+            boc.prop(block, 'controller')
 
 
 classes = (
