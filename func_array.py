@@ -1,9 +1,6 @@
-from types import CellType
 import bpy
 import bmesh
 from .handler import deform_update
-
-
 
 class FuncArrayObject(bpy.types.PropertyGroup):
     index: bpy.props.IntProperty()
