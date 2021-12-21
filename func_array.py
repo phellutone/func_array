@@ -1,21 +1,28 @@
 import bpy
-from .func_array_variable import *
+import bmesh
 from .handler import deform_update
+
+class FuncArrayObject(bpy.types.PropertyGroup):
+    index: bpy.props.IntProperty()
+    is_activate: bpy.props.BoolProperty()
+    is_computing: bpy.props.BoolProperty()
+    is_evaluated: bpy.props.BoolProperty()
+    object: bpy.props.PointerProperty(type=bpy.types.Object)
 
 class FuncArray(bpy.types.PropertyGroup):
     index: bpy.props.IntProperty()
     name: bpy.props.StringProperty()
-    mute: bpy.props.BoolProperty()
+    mute: bpy.props.BoolProperty(default=False)
+
     is_activate: bpy.props.BoolProperty()
+    is_evaluated: bpy.props.BoolProperty()
+    lock: bpy.props.BoolProperty()
 
     target: bpy.props.PointerProperty(
         type=bpy.types.Object,
         poll=lambda self, object: object.type == 'MESH'
     )
-    eval_target: bpy.props.PointerProperty(
-        type=bpy.types.Object,
-        poll=lambda self, object: object.type == 'MESH'
-    )
+    eval_targets: bpy.props.CollectionProperty(type=FuncArrayObject)
 
     count: bpy.props.IntProperty(
         min=1,
@@ -23,8 +30,29 @@ class FuncArray(bpy.types.PropertyGroup):
         soft_max=25
     )
 
-    variables: bpy.props.CollectionProperty(type=FuncArrayVariable)
-    active_variable_index: bpy.props.IntProperty()
+    controller: bpy.props.FloatProperty()
+    ctr_max: bpy.props.FloatProperty(default=1.0)
+    ctr_min: bpy.props.FloatProperty(default=0.0)
+
+    trg_co: bpy.props.PointerProperty(type=bpy.types.Collection)
+    trg_ob: bpy.props.PointerProperty(type=bpy.types.Object)
+
+def eval_obj_init(block: FuncArray, count: int, co: bpy.types.Collection):
+    if len(block.eval_targets) > count:
+        for i in reversed(range(count, len(block.eval_targets))):
+            e = block.eval_targets[i]
+            ob = e.object
+            me = e.object.data
+            bpy.data.objects.remove(ob)
+            bpy.data.meshes.remove(me)
+            block.eval_targets.remove(i)
+    elif len(block.eval_targets) < count:
+        for i in range(count-len(block.eval_targets)):
+            e: FuncArrayObject = block.eval_targets.add()
+            me = bpy.data.meshes.new('FuncArrayDummy.'+block.target.name+'.'+str(i))
+            ob = bpy.data.objects.new('FuncArrayDummy.'+block.target.name+'.'+str(i), me)
+            e.object = ob
+            co.objects.link(ob)
 
 class FUNCARRAY_OT_add(bpy.types.Operator):
     bl_idname = 'func_array.add'
@@ -40,7 +68,6 @@ class FUNCARRAY_OT_add(bpy.types.Operator):
         block.index = len(farray)-1
         context.scene.active_func_array_index = len(farray)-1
 
-        bpy.ops.func_array.variable_add()
         return {'FINISHED'}
 
 class FUNCARRAY_OT_remove(bpy.types.Operator):
@@ -67,39 +94,114 @@ class FUNCARRAY_OT_remove(bpy.types.Operator):
         context.scene.active_func_array_index = min(max(0, index), len(farray)-1)
         return {'FINISHED'}
 
-class FUNCARRAY_OT_activate(bpy.types.Operator):
-    bl_idname = 'func_array.activate'
-    bl_label = 'activate'
+class FUNCARRAY_OT_activation(bpy.types.Operator):
+    bl_idname = 'func_array.activation'
+    bl_label = 'activation'
     bl_description = ''
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {'REGISTER'}
+
+    _timer = None
+
+    def modal(self, context, event):
+        """
+        is_evaluated: False -> True
+        """
+        
+        farray: list[FuncArray] = context.scene.func_array
+        index: int = context.scene.active_func_array_index
+        if index < 0 or not farray:
+            return {'PASS_THROUGH'}
+        
+        for block in farray:
+            if not block.is_activate:
+                continue
+
+            if block.is_evaluated:
+                continue
+
+            if block.mute:
+                continue
+            
+            block.lock = True
+            eval_obj_init(block, block.count, block.trg_co)
+
+            ob = block.target.copy()
+            context.scene.collection.objects.link(ob)
+            for i in range(block.count):
+                eval_mesh = block.eval_targets[i].object.data
+                bm = bmesh.new()
+                bm.from_mesh(eval_mesh)
+                bm.clear()
+
+                if block.count == 1:
+                    block.controller = block.ctr_min
+                else:
+                    block.controller = i/(block.count-1)*(block.ctr_max-block.ctr_min)+block.ctr_min
+                depsgraph = context.evaluated_depsgraph_get()
+                eval_obj = ob.evaluated_get(depsgraph)
+                me = bpy.data.meshes.new_from_object(eval_obj)
+                me.transform(eval_obj.matrix_world)
+                bm.from_mesh(me)
+                bpy.data.meshes.remove(me)
+
+                bm.to_mesh(eval_mesh)
+                bm.free()
+            bpy.data.objects.remove(ob)
+
+            block.is_evaluated = True
+            block.lock = False
+
+        return {'PASS_THROUGH'}
 
     def execute(self, context):
+        """
+        is_activate: toggle
+        """
+
         farray: list[FuncArray] = context.scene.func_array
         index: int = context.scene.active_func_array_index
         if index < 0 or not farray:
             return {'CANCELLED'}
 
         block: FuncArray = farray[index]
+
         if block.is_activate:
-            return {'CANCELLED'}
-        if block.target is None:
-            return {'CANCELLED'}
-        
-        me = bpy.data.meshes.new('FuncArrayDummy.'+block.target.name)
-        ob = bpy.data.objects.new('FuncArrayDummy.'+block.target.name, me)
-        block.eval_target = ob
+            ob = block.trg_ob
+            bpy.data.objects.remove(ob)
 
-        # co = bpy.data.collections.new('FuncArrayDummy.'+block.target.name)
-        # co.objects.link(ob)
+            co = block.trg_co
+            eval_obj_init(block, 0, co)
+            bpy.data.collections.remove(co)
 
-        # obj = bpy.data.objects.new('FuncArray.'+block.target.name, None)
-        # obj.instance_type = 'COLLECTION'
-        # obj.instance_collection = co
-        # context.scene.collection.objects.link(obj)
-        context.scene.collection.objects.link(ob)
+            if self._timer is not None:
+                wm = context.window_manager
+                wm.event_timer_remove(self._timer)
+                self._timer = None
 
-        block.is_activate = True
-        return {'FINISHED'}
+            block.is_activate = False
+            return {'FINISHED'}
+        else:
+            if block.target is None:
+                return {'CANCELLED'}
+            
+            co = bpy.data.collections.new('FuncArrayDummy.'+block.target.name)
+            block.trg_co = co
+
+            eval_obj_init(block, block.count, co)
+
+            obj = bpy.data.objects.new('FuncArray.'+block.target.name, None)
+            obj.instance_type = 'COLLECTION'
+            obj.instance_collection = co
+            block.trg_ob = obj
+            context.scene.collection.objects.link(obj)
+
+            if self._timer is None:
+                wm = context.window_manager
+                self._timer = wm.event_timer_add(0.05, window=context.window)
+                wm.modal_handler_add(self)
+
+            block.is_activate = True
+            return {'RUNNING_MODAL'}
 
 class OBJECT_UL_FuncArray(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
@@ -130,27 +232,39 @@ class OBJECT_PT_FuncArray(bpy.types.Panel):
         col.operator('func_array.remove', icon='REMOVE', text='')
 
         if scene.func_array:
-            index = scene.active_func_array_index
-            block = scene.func_array[index]
+            index: int = scene.active_func_array_index
+            block: FuncArray = scene.func_array[index]
 
             col = layout.column()
-            col.prop(block, 'target', text='Target')
-            col.prop(block, 'count', text='Count')
-            col.operator('func_array.activate')
+
+            row = col.row()
+            if block.is_activate:
+                row.operator('func_array.activation', text='deactivate', icon='PAUSE')
+            else:
+                row.operator('func_array.activation', text='activate', icon='PLAY')
+
+            box = col.box().column()
+            # box.enabled = not block.is_activate
+            boc = box.column()
+            boc.enabled = not block.is_activate
+            boc.prop(block, 'target', text='Target')
+            box.prop(block, 'count', text='Count')
+
+            row = box.row(align=True)
+            row.prop(block, 'ctr_max', text='max')
+            row.prop(block, 'ctr_min', text='min')
+
+            boc.prop(block, 'controller')
 
 
 classes = (
-    FuncArrayVariable,
+    FuncArrayObject,
     FuncArray,
     FUNCARRAY_OT_add,
     FUNCARRAY_OT_remove,
-    FUNCARRAY_OT_activate,
-    FUNCARRAY_OT_variable_add,
-    FUNCARRAY_OT_variable_remove,
+    FUNCARRAY_OT_activation,
     OBJECT_UL_FuncArray,
-    OBJECT_UL_FuncArrayVariable,
     OBJECT_PT_FuncArray,
-    OBJECT_PT_FuncArrayVariable
 )
 
 def register():
