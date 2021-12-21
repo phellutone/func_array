@@ -20,7 +20,7 @@ class FuncArray(bpy.types.PropertyGroup):
 
     target: bpy.props.PointerProperty(
         type=bpy.types.Object,
-        poll=lambda self, object: object.type == 'MESH'
+        poll=lambda self, object: object.type == 'MESH' and not object.is_func_array_dummy
     )
     eval_targets: bpy.props.CollectionProperty(type=FuncArrayObject)
 
@@ -31,8 +31,19 @@ class FuncArray(bpy.types.PropertyGroup):
     )
 
     controller: bpy.props.FloatProperty()
-    ctr_max: bpy.props.FloatProperty(default=1.0)
-    ctr_min: bpy.props.FloatProperty(default=0.0)
+    def ctr_update(self, context):
+        self.__class__.controller = bpy.props.FloatProperty(
+            max=self.ctr_max,
+            min=self.ctr_min
+        )
+    ctr_max: bpy.props.FloatProperty(
+        default=1.0,
+        update=ctr_update
+    )
+    ctr_min: bpy.props.FloatProperty(
+        default=0.0,
+        update=ctr_update
+    )
 
     trg_co: bpy.props.PointerProperty(type=bpy.types.Collection)
     trg_ob: bpy.props.PointerProperty(type=bpy.types.Object)
@@ -51,6 +62,7 @@ def eval_obj_init(block: FuncArray, count: int, co: bpy.types.Collection):
             e: FuncArrayObject = block.eval_targets.add()
             me = bpy.data.meshes.new('FuncArrayDummy.'+block.target.name+'.'+str(i))
             ob = bpy.data.objects.new('FuncArrayDummy.'+block.target.name+'.'+str(i), me)
+            ob.is_func_array_dummy = True
             e.object = ob
             co.objects.link(ob)
 
@@ -127,6 +139,7 @@ class FUNCARRAY_OT_activation(bpy.types.Operator):
 
             ob = block.target.copy()
             context.scene.collection.objects.link(ob)
+            ctr = block.controller
             for i in range(block.count):
                 eval_mesh = block.eval_targets[i].object.data
                 bm = bmesh.new()
@@ -147,6 +160,7 @@ class FUNCARRAY_OT_activation(bpy.types.Operator):
                 bm.to_mesh(eval_mesh)
                 bm.free()
             bpy.data.objects.remove(ob)
+            block.controller = ctr
 
             block.is_evaluated = True
             block.lock = False
@@ -197,7 +211,7 @@ class FUNCARRAY_OT_activation(bpy.types.Operator):
 
             if self._timer is None:
                 wm = context.window_manager
-                self._timer = wm.event_timer_add(0.05, window=context.window)
+                self._timer = wm.event_timer_add(0.1, window=context.window)
                 wm.modal_handler_add(self)
 
             block.is_activate = True
@@ -246,15 +260,15 @@ class OBJECT_PT_FuncArray(bpy.types.Panel):
             box = col.box().column()
             # box.enabled = not block.is_activate
             boc = box.column()
-            boc.enabled = not block.is_activate
-            boc.prop(block, 'target', text='Target')
+            # boc.enabled = not block.is_activate
+            box.prop(block, 'target', text='Target')
             box.prop(block, 'count', text='Count')
 
             row = box.row(align=True)
             row.prop(block, 'ctr_max', text='max')
             row.prop(block, 'ctr_min', text='min')
 
-            boc.prop(block, 'controller')
+            box.prop(block, 'controller')
 
 
 classes = (
@@ -273,6 +287,8 @@ def register():
     
     bpy.types.Scene.func_array = bpy.props.CollectionProperty(type=FuncArray)
     bpy.types.Scene.active_func_array_index = bpy.props.IntProperty()
+    bpy.types.Object.is_func_array_dummy = bpy.props.BoolProperty()
+
     if not deform_update in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.append(deform_update)
 
@@ -282,5 +298,7 @@ def unregister():
     
     del bpy.types.Scene.func_array
     del bpy.types.Scene.active_func_array_index
+    del bpy.types.Object.is_func_array_dummy
+
     if deform_update in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.remove(deform_update)
