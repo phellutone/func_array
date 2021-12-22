@@ -1,5 +1,7 @@
 import bpy
 
+_DG = None
+
 class FuncArrayObject(bpy.types.PropertyGroup):
     index: bpy.props.IntProperty()
     is_activate: bpy.props.BoolProperty()
