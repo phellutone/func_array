@@ -1,6 +1,6 @@
 import bpy
 from .properties import FuncArray, FuncArrayObject
-from .handler import eval_dup, eval_obj_init
+from .handlers import eval_dup, eval_obj_init
 
 class FUNCARRAY_OT_add(bpy.types.Operator):
     bl_idname = 'func_array.add'
