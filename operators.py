@@ -128,11 +128,12 @@ class FUNCARRAY_OT_activation(bpy.types.Operator):
 
             _DG.append((index, context.evaluated_depsgraph_get()))
 
-            if FUNCARRAY_OT_activation._timer is None:
-                wm = context.window_manager
-                FUNCARRAY_OT_activation._timer = wm.event_timer_add(0.02, window=context.window)
-                wm.modal_handler_add(self)
+            # if FUNCARRAY_OT_activation._timer is None:
+            #     wm = context.window_manager
+            #     FUNCARRAY_OT_activation._timer = wm.event_timer_add(0.02, window=context.window)
+            #     wm.modal_handler_add(self)
 
             block.is_activate = True
-            eval_dup(context, block)
+            # eval_dup(context, block)
+            return {'FINISHED'}
             return {'RUNNING_MODAL'}
