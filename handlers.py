@@ -1,6 +1,6 @@
 import bpy
 import bmesh
-from .properties import FuncArray, FuncArrayObject
+from .properties import FuncArray, FuncArrayObject, _DG
 
 def eval_obj_init(block: FuncArray, count: int, co: bpy.types.Collection):
     if len(block.eval_targets) > count:
@@ -48,3 +48,32 @@ def eval_dup(context: bpy.types.Context, block: FuncArray):
         bm.free()
     bpy.data.objects.remove(ob)
     block.controller = ctr
+
+_FUNCARRAY_UPDATE_LOCK = False
+
+def deform_update(scene, depsgraph):
+    global _FUNCARRAY_UPDATE_LOCK, _DG
+    if _FUNCARRAY_UPDATE_LOCK:
+        return
+    
+    farray: list[FuncArray] = scene.func_array
+    index: int = scene.active_func_array_index
+    if index < 0 or not farray:
+        return
+
+    for block in farray:
+        if not block.is_activate:
+            continue
+
+        if block.mute:
+            continue
+
+        deg = [d for i, d in _DG if i == index]
+        if not deg:
+            continue
+        deg = deg[0]
+
+        if not deg.updates:
+            continue
+
+        eval_dup(, block)
