@@ -1,6 +1,8 @@
 import bpy
 import bmesh
-from .properties import FuncArray, FuncArrayObject, _DG
+from .properties import FuncArray, FuncArrayObject, _FUNCARRAY_DEPSGRAPHS
+
+_FUNCARRAY_UPDATE_LOCK = False
 
 def eval_obj_init(block: FuncArray, count: int, co: bpy.types.Collection):
     if len(block.eval_targets) > count:
@@ -21,6 +23,9 @@ def eval_obj_init(block: FuncArray, count: int, co: bpy.types.Collection):
             co.objects.link(ob)
 
 def eval_dup(context: bpy.types.Context, block: FuncArray):
+    global _FUNCARRAY_UPDATE_LOCK
+    _FUNCARRAY_UPDATE_LOCK = True
+
     eval_obj_init(block, block.count, block.trg_co)
 
     ob = block.target.copy()
@@ -28,7 +33,8 @@ def eval_dup(context: bpy.types.Context, block: FuncArray):
 
     ctr = block.controller
     for i in range(block.count):
-        eval_mesh = block.eval_targets[i].object.data
+        eval_obj = block.eval_targets[i].object
+        eval_mesh = eval_obj.data
         bm = bmesh.new()
         bm.from_mesh(eval_mesh)
         bm.clear()
@@ -38,22 +44,23 @@ def eval_dup(context: bpy.types.Context, block: FuncArray):
         else:
             block.controller = i/(block.count-1)*(block.ctr_max-block.ctr_min)+block.ctr_min
         depsgraph = context.evaluated_depsgraph_get()
-        eval_obj = ob.evaluated_get(depsgraph)
-        me = bpy.data.meshes.new_from_object(eval_obj)
-        me.transform(eval_obj.matrix_world)
-        bm.from_mesh(me)
-        bpy.data.meshes.remove(me)
+        e_ob = ob.evaluated_get(depsgraph)
 
+        eval_obj.matrix_world = e_ob.matrix_world
+        e_me = bpy.data.meshes.new_from_object(e_ob)
+        bm.from_mesh(e_me)
         bm.to_mesh(eval_mesh)
+
+        bpy.data.meshes.remove(e_me)
         bm.free()
     bpy.data.objects.remove(ob)
     block.controller = ctr
 
-_FUNCARRAY_UPDATE_LOCK = False
+    _FUNCARRAY_UPDATE_LOCK = False
 
 @bpy.app.handlers.persistent
 def deform_update(scene, depsgraph):
-    global _FUNCARRAY_UPDATE_LOCK, _DG
+    global _FUNCARRAY_UPDATE_LOCK, _FUNCARRAY_DEPSGRAPHS
     if _FUNCARRAY_UPDATE_LOCK:
         return
     
@@ -62,8 +69,6 @@ def deform_update(scene, depsgraph):
     if index < 0 or not farray:
         return
 
-    _FUNCARRAY_UPDATE_LOCK = True
-
     for block in farray:
         if not block.is_activate:
             continue
@@ -71,7 +76,7 @@ def deform_update(scene, depsgraph):
         if block.mute:
             continue
 
-        deg = [d for i, d in _DG if i == index]
+        deg = [d for i, d in _FUNCARRAY_DEPSGRAPHS if i == index]
         if not deg:
             continue
         deg = deg[0]
@@ -80,5 +85,3 @@ def deform_update(scene, depsgraph):
             continue
 
         eval_dup(bpy.context, block)
-    
-    _FUNCARRAY_UPDATE_LOCK = False
