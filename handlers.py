@@ -51,6 +51,7 @@ def eval_dup(context: bpy.types.Context, block: FuncArray):
 
 _FUNCARRAY_UPDATE_LOCK = False
 
+@bpy.app.handlers.persistent
 def deform_update(scene, depsgraph):
     global _FUNCARRAY_UPDATE_LOCK, _DG
     if _FUNCARRAY_UPDATE_LOCK:
@@ -60,6 +61,8 @@ def deform_update(scene, depsgraph):
     index: int = scene.active_func_array_index
     if index < 0 or not farray:
         return
+
+    _FUNCARRAY_UPDATE_LOCK = True
 
     for block in farray:
         if not block.is_activate:
@@ -76,4 +79,6 @@ def deform_update(scene, depsgraph):
         if not deg.updates:
             continue
 
-        eval_dup(, block)
+        eval_dup(bpy.context, block)
+    
+    _FUNCARRAY_UPDATE_LOCK = False
