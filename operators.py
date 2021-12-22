@@ -1,5 +1,5 @@
 import bpy
-from .properties import FuncArray, FuncArrayObject
+from .properties import FuncArray, FuncArrayObject, _DG
 from .handlers import eval_dup, eval_obj_init
 
 class FUNCARRAY_OT_add(bpy.types.Operator):
@@ -31,7 +31,8 @@ class FUNCARRAY_OT_remove(bpy.types.Operator):
             return {'CANCELLED'}
 
         block: FuncArray = farray[index]
-
+        if block.is_activate:
+            bpy.ops.func_array.activation()
         farray.remove(index)
 
         for b in farray:
@@ -49,7 +50,7 @@ class FUNCARRAY_OT_activation(bpy.types.Operator):
     bl_options = {'REGISTER'}
 
     _timer = None
-    _dg = None
+    _dg: list[tuple[int, bpy.types.Depsgraph]] = []
 
     def modal(self, context, event):
         """
@@ -59,8 +60,6 @@ class FUNCARRAY_OT_activation(bpy.types.Operator):
         index: int = context.scene.active_func_array_index
         if index < 0 or not farray:
             return {'PASS_THROUGH'}
-        
-        depsgraph = FUNCARRAY_OT_activation._dg
 
         for block in farray:
             if not block.is_activate:
@@ -69,12 +68,21 @@ class FUNCARRAY_OT_activation(bpy.types.Operator):
             if block.mute:
                 continue
             
-            if [u for u in depsgraph.updates]:
-                eval_dup(context, block)
+            depsgraph = [d for i, d in _DG if i == index]
+            if not depsgraph:
+                continue
+            depsgraph = depsgraph[0]
+            
+            print(depsgraph.updates)
+            if not depsgraph.updates:
+                continue
+            
+            eval_dup(context, block)
 
         return {'PASS_THROUGH'}
 
     def execute(self, context):
+        global _DG
         """
         is_activate: toggle
         """
@@ -94,9 +102,12 @@ class FUNCARRAY_OT_activation(bpy.types.Operator):
             eval_obj_init(block, 0, co)
             bpy.data.collections.remove(co)
 
-            wm = context.window_manager
-            wm.event_timer_remove(FUNCARRAY_OT_activation._timer)
-            self._timer = None
+            _DG = [(i, d) for i, d in _DG if i != index]
+
+            if len(farray) == 1 or not FUNCARRAY_OT_activation._timer is None:
+                wm = context.window_manager
+                wm.event_timer_remove(FUNCARRAY_OT_activation._timer)
+                FUNCARRAY_OT_activation._timer = None
 
             block.is_activate = False
             return {'FINISHED'}
@@ -115,11 +126,12 @@ class FUNCARRAY_OT_activation(bpy.types.Operator):
             block.trg_ob = obj
             context.scene.collection.objects.link(obj)
 
-            FUNCARRAY_OT_activation._dg = context.evaluated_depsgraph_get()
+            _DG.append((index, context.evaluated_depsgraph_get()))
 
-            wm = context.window_manager
-            FUNCARRAY_OT_activation._timer = wm.event_timer_add(0.02, window=context.window)
-            wm.modal_handler_add(self)
+            if FUNCARRAY_OT_activation._timer is None:
+                wm = context.window_manager
+                FUNCARRAY_OT_activation._timer = wm.event_timer_add(0.02, window=context.window)
+                wm.modal_handler_add(self)
 
             block.is_activate = True
             eval_dup(context, block)
