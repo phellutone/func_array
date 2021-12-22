@@ -1,6 +1,6 @@
 import bpy
 
-_DG = None
+_DG = []
 
 class FuncArrayObject(bpy.types.PropertyGroup):
     index: bpy.props.IntProperty()
