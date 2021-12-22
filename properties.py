@@ -1,6 +1,6 @@
 import bpy
 
-_DG = []
+_FUNCARRAY_DEPSGRAPHS: list[tuple[int, bpy.types.Depsgraph]] = []
 
 class FuncArrayObject(bpy.types.PropertyGroup):
     index: bpy.props.IntProperty()
@@ -28,18 +28,21 @@ class FuncArray(bpy.types.PropertyGroup):
         soft_max=25
     )
 
-    controller: bpy.props.FloatProperty()
+    controller: bpy.props.FloatProperty(
+        min=0.0,
+        max=1.0
+    )
     def ctr_update(self, context):
         self.__class__.controller = bpy.props.FloatProperty(
-            max=self.ctr_max,
-            min=self.ctr_min
+            min=self.ctr_min,
+            max=self.ctr_max
         )
-    ctr_max: bpy.props.FloatProperty(
-        default=1.0,
-        update=ctr_update
-    )
     ctr_min: bpy.props.FloatProperty(
         default=0.0,
+        update=ctr_update
+    )
+    ctr_max: bpy.props.FloatProperty(
+        default=1.0,
         update=ctr_update
     )
 
