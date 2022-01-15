@@ -1,4 +1,6 @@
 
+# master/develop
+
 bl_info = {
     'name': 'func array',
     'author': 'phellutone',
