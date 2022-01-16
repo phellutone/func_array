@@ -1,6 +1,9 @@
+
 import bpy
-from .properties import FuncArray, FuncArrayObject, _FUNCARRAY_DEPSGRAPHS
+from .properties import FuncArray, FuncArrayIndex, _FUNCARRAY_DEPSGRAPHS
 from .handlers import eval_dup, eval_obj_init
+
+
 
 class FUNCARRAY_OT_add(bpy.types.Operator):
     bl_idname = 'func_array.add'
@@ -9,13 +12,14 @@ class FUNCARRAY_OT_add(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context: bpy.types.Context) -> set[str]:
-        farray: list[FuncArray] = context.scene.func_array
+        scene = context.scene
+        farray: list[FuncArray] = getattr(scene, FuncArray.identifier)
         block: FuncArray = farray.add()
 
         block.name = 'Array '+str(len(farray))
         block.index = len(farray)-1
 
-        context.scene.active_func_array_index = len(farray)-1
+        setattr(scene, FuncArrayIndex.identifier, len(farray)-1)
         return {'FINISHED'}
 
 class FUNCARRAY_OT_remove(bpy.types.Operator):
@@ -25,8 +29,9 @@ class FUNCARRAY_OT_remove(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context: bpy.types.Context) -> set[str]:
-        farray: list[FuncArray] = context.scene.func_array
-        index: int = context.scene.active_func_array_index
+        scene = context.scene
+        farray: list[FuncArray] = getattr(scene, FuncArray.identifier)
+        index: int = getattr(scene, FuncArrayIndex.identifier)
         if index < 0 or not farray:
             return {'CANCELLED'}
 
@@ -40,7 +45,7 @@ class FUNCARRAY_OT_remove(bpy.types.Operator):
                 continue
             b.index = b.index-1
 
-        context.scene.active_func_array_index = min(max(0, index), len(farray)-1)
+        setattr(scene, FuncArrayIndex.identifier, min(max(0, index), len(farray)-1))
         return {'FINISHED'}
 
 class FUNCARRAY_OT_activation(bpy.types.Operator):
@@ -52,8 +57,9 @@ class FUNCARRAY_OT_activation(bpy.types.Operator):
     def execute(self, context: bpy.types.Context) -> set[str]:
         global _FUNCARRAY_DEPSGRAPHS
 
-        farray: list[FuncArray] = context.scene.func_array
-        index: int = context.scene.active_func_array_index
+        scene = context.scene
+        farray: list[FuncArray] = getattr(scene, FuncArray.identifier)
+        index: int = getattr(scene, FuncArrayIndex.identifier)
         if index < 0 or not farray:
             return {'CANCELLED'}
 

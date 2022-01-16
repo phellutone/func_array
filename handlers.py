@@ -1,8 +1,12 @@
+
 import bpy
 import bmesh
-from .properties import FuncArray, FuncArrayObject, _FUNCARRAY_DEPSGRAPHS
+from .properties import FuncArray, FuncArrayDummy, FuncArrayIndex, FuncArrayObject, _FUNCARRAY_DEPSGRAPHS
+
+
 
 _FUNCARRAY_UPDATE_LOCK = False
+
 
 def eval_obj_init(block: FuncArray, count: int, co: bpy.types.Collection) -> None:
     if len(block.eval_targets) > count:
@@ -19,7 +23,7 @@ def eval_obj_init(block: FuncArray, count: int, co: bpy.types.Collection) -> Non
             target: bpy.types.Object = block.target
             me = bpy.data.meshes.new('FuncArrayDummy.'+target.name+'.'+str(i))
             ob = bpy.data.objects.new('FuncArrayDummy.'+target.name+'.'+str(i), me)
-            ob.is_func_array_dummy = True
+            setattr(ob, FuncArrayDummy.identifier, True)
             e.object = ob
             co.objects.link(ob)
 
@@ -67,8 +71,8 @@ def deform_update(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgraph) -> Non
     if _FUNCARRAY_UPDATE_LOCK:
         return
 
-    farray: list[FuncArray] = scene.func_array
-    index: int = scene.active_func_array_index
+    farray: list[FuncArray] = getattr(scene, FuncArray.identifier)
+    index: int = getattr(scene, FuncArrayIndex.identifier)
     if index < 0 or not farray:
         return
 
