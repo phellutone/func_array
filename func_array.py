@@ -1,8 +1,17 @@
+
 import bpy
-from .properties import FuncArray, FuncArrayObject
+from .properties import FuncArray, FuncArrayDummy, FuncArrayObject, FuncArrayIndex
 from .operators import FUNCARRAY_OT_add, FUNCARRAY_OT_remove, FUNCARRAY_OT_activation
 from .panels import OBJECT_UL_FuncArray, OBJECT_PT_FuncArray
 from .handlers import deform_update
+
+
+
+paths = {
+    FuncArray.identifier: (bpy.types.Scene, bpy.props.CollectionProperty(type=FuncArray)),
+    FuncArrayIndex.identifier: (bpy.types.Scene, bpy.props.IntProperty()),
+    FuncArrayDummy.identifier: (bpy.types.Object, bpy.props.BoolProperty())
+}
 
 classes = (
     FuncArrayObject,
@@ -14,13 +23,14 @@ classes = (
     OBJECT_PT_FuncArray,
 )
 
+
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
-    
-    bpy.types.Scene.func_array = bpy.props.CollectionProperty(type=FuncArray)
-    bpy.types.Scene.active_func_array_index = bpy.props.IntProperty()
-    bpy.types.Object.is_func_array_dummy = bpy.props.BoolProperty()
+
+    for identifier in paths:
+        base, prop = paths[identifier]
+        setattr(base, identifier, prop)
 
     if not deform_update in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.append(deform_update)
@@ -28,10 +38,10 @@ def register():
 def unregister():
     for cls in classes:
         bpy.utils.unregister_class(cls)
-    
-    del bpy.types.Scene.func_array
-    del bpy.types.Scene.active_func_array_index
-    del bpy.types.Object.is_func_array_dummy
+
+    for identifier in paths:
+        base, prop = paths[identifier]
+        delattr(base, identifier)
 
     if deform_update in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.remove(deform_update)

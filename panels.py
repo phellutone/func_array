@@ -1,5 +1,8 @@
+
 import bpy
-from .properties import FuncArray, FuncArrayObject
+from .properties import FuncArray, FuncArrayIndex
+
+
 
 class OBJECT_UL_FuncArray(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
@@ -18,8 +21,8 @@ class OBJECT_PT_FuncArray(bpy.types.Panel):
     bl_idname = 'VIEW3D_PT_func_array'
     bl_label = 'Func Array'
     bl_options = {'DEFAULT_CLOSED'}
-    
-    def draw(self, context):
+
+    def draw(self, context: bpy.types.Context) -> None:
         scene = context.scene
         layout = self.layout
 
@@ -29,9 +32,10 @@ class OBJECT_PT_FuncArray(bpy.types.Panel):
         col.operator('func_array.add', icon='ADD', text='')
         col.operator('func_array.remove', icon='REMOVE', text='')
 
-        if scene.func_array:
-            index: int = scene.active_func_array_index
-            block: FuncArray = scene.func_array[index]
+        farray: list[FuncArray] = getattr(scene, FuncArray.identifier)
+        if farray:
+            index: int = getattr(scene, FuncArrayIndex.identifier)
+            block = farray[index]
 
             col = layout.column()
 
