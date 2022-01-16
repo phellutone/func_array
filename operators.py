@@ -8,7 +8,7 @@ class FUNCARRAY_OT_add(bpy.types.Operator):
     bl_description = ''
     bl_options = {'REGISTER', 'UNDO'}
 
-    def execute(self, context):
+    def execute(self, context: bpy.types.Context) -> set[str]:
         farray: list[FuncArray] = context.scene.func_array
         block: FuncArray = farray.add()
 
@@ -24,7 +24,7 @@ class FUNCARRAY_OT_remove(bpy.types.Operator):
     bl_description = ''
     bl_options = {'REGISTER', 'UNDO'}
 
-    def execute(self, context):
+    def execute(self, context: bpy.types.Context) -> set[str]:
         farray: list[FuncArray] = context.scene.func_array
         index: int = context.scene.active_func_array_index
         if index < 0 or not farray:
@@ -49,7 +49,7 @@ class FUNCARRAY_OT_activation(bpy.types.Operator):
     bl_description = ''
     bl_options = {'REGISTER'}
 
-    def execute(self, context):
+    def execute(self, context: bpy.types.Context) -> set[str]:
         global _FUNCARRAY_DEPSGRAPHS
 
         farray: list[FuncArray] = context.scene.func_array
@@ -74,13 +74,15 @@ class FUNCARRAY_OT_activation(bpy.types.Operator):
         else:
             if block.target is None:
                 return {'CANCELLED'}
-            
-            co = bpy.data.collections.new('FuncArrayDummy.'+block.target.name)
+
+            target: bpy.types.Object = block.target
+
+            co = bpy.data.collections.new('FuncArrayDummy.'+target.name)
             block.trg_co = co
 
             eval_obj_init(block, block.count, co)
 
-            obj = bpy.data.objects.new('FuncArray.'+block.target.name, None)
+            obj = bpy.data.objects.new('FuncArray.'+target.name, None)
             obj.instance_type = 'COLLECTION'
             obj.instance_collection = co
             block.trg_ob = obj

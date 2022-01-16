@@ -16,9 +16,11 @@ class FuncArray(bpy.types.PropertyGroup):
 
     is_activate: bpy.props.BoolProperty()
 
+    def target_poll(self, object: bpy.types.Object) -> bool:
+        return object.type == 'MESH' and not object.is_func_array_dummy
     target: bpy.props.PointerProperty(
         type=bpy.types.Object,
-        poll=lambda self, object: object.type == 'MESH' and not object.is_func_array_dummy
+        poll=target_poll
     )
     eval_targets: bpy.props.CollectionProperty(type=FuncArrayObject)
 
