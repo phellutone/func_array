@@ -1,6 +1,7 @@
 
 import bpy
 from .properties import FuncArray, FuncArrayIndex
+from .virtual_driver import virtual_driver
 
 
 
@@ -55,3 +56,6 @@ class OBJECT_PT_FuncArray(bpy.types.Panel):
             row.prop(block, 'ctr_min', text='min')
 
             box.prop(block, 'controller')
+
+class OBJECT_PT_FuncArrayVD(virtual_driver.OBJECT_PT_VirtualDriver):
+    bl_parent_id = OBJECT_PT_FuncArray.bl_idname
