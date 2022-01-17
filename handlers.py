@@ -83,7 +83,7 @@ def deform_update(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgraph) -> Non
         if block.mute:
             continue
 
-        deg = [d for i, d in _FUNCARRAY_DEPSGRAPHS if i == index]
+        deg = [d for i, d in _FUNCARRAY_DEPSGRAPHS if i == block.index]
         if not deg:
             continue
         deg = deg[0]
