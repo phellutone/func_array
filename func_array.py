@@ -2,24 +2,16 @@
 from typing import Union
 import bpy
 from .properties import FuncArray, FuncArrayDummy, FuncArrayObject, FuncArrayIndex
-from .operators import FUNCARRAY_OT_add, FUNCARRAY_OT_remove, FUNCARRAY_OT_activation
+from .operators import FUNCARRAY_OT_VD_remove, FUNCARRAY_OT_add, FUNCARRAY_OT_remove, FUNCARRAY_OT_activation, FUNCARRAY_OT_VD_add
 from .panels import OBJECT_UL_FuncArray, OBJECT_PT_FuncArray, OBJECT_PT_FuncArrayVD
-from .handlers import deform_update
+from .handlers import deform_update, favd_access_context, favd_access_id
 from .virtual_driver import virtual_driver
 
 
 
-def favd_access_context(context: bpy.types.Context) -> bpy.types.bpy_struct:
-    return favd_access_id(context.scene)
+virtual_driver.VIRTUALDRIVER_OT_add.bl_idname = FUNCARRAY_OT_VD_add.bl_idname
+virtual_driver.VIRTUALDRIVER_OT_remove.bl_idname = FUNCARRAY_OT_VD_remove.bl_idname
 
-def favd_access_id(id: bpy.types.ID) -> bpy.types.bpy_struct:
-    farray: Union[list[FuncArray], None] = getattr(id, FuncArray.identifier, None)
-    if not farray:
-        return
-    index: Union[int, None] = getattr(id, FuncArrayIndex.identifier, None)
-    if index is None:
-        return
-    return farray[index]
 
 paths = {
     FuncArray.identifier: (bpy.types.Scene, bpy.props.CollectionProperty(type=FuncArray)),
@@ -46,8 +38,14 @@ def register():
     )
     vdclasses = [
         FuncArrayObject,
-        FuncArray
-    ]+[cls for cls in virtual_driver.classes if not cls is virtual_driver.OBJECT_PT_VirtualDriver]
+        FuncArray,
+        FUNCARRAY_OT_VD_add,
+        FUNCARRAY_OT_VD_remove
+    ]+[cls for cls in virtual_driver.classes if not cls in (
+        virtual_driver.OBJECT_PT_VirtualDriver,
+        virtual_driver.VIRTUALDRIVER_OT_add,
+        virtual_driver.VIRTUALDRIVER_OT_remove
+    )]
     virtual_driver.classes = vdclasses
     virtual_driver.register()
 

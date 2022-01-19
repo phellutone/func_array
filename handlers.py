@@ -1,12 +1,26 @@
 
+from typing import Union
 import bpy
 import bmesh
 from .properties import FuncArray, FuncArrayDummy, FuncArrayIndex, FuncArrayObject, _FUNCARRAY_DEPSGRAPHS
+from .virtual_driver import virtual_driver
 
 
 
 _FUNCARRAY_UPDATE_LOCK = False
 
+
+def favd_access_context(context: bpy.types.Context) -> bpy.types.bpy_struct:
+    return favd_access_id(context.scene)
+
+def favd_access_id(id: bpy.types.ID) -> bpy.types.bpy_struct:
+    farray: Union[list[FuncArray], None] = getattr(id, FuncArray.identifier, None)
+    if not farray:
+        return
+    index: Union[int, None] = getattr(id, FuncArrayIndex.identifier, None)
+    if index is None:
+        return
+    return farray[index]
 
 def eval_obj_init(block: FuncArray, count: int, co: bpy.types.Collection) -> None:
     if len(block.eval_targets) > count:
@@ -37,6 +51,12 @@ def eval_dup(context: bpy.types.Context, block: FuncArray) -> None:
     ob = target.copy()
     context.scene.collection.objects.link(ob)
 
+    ivd: Union[list[virtual_driver.InternalVirtualDriver], None] = getattr(block, virtual_driver.InternalVirtualDriver.identifier, None)
+    if ivd:
+        for vdblock in ivd:
+            if vdblock.id == target:
+                vdblock.id = ob
+
     ctr: float = block.controller
     for i in range(block.count):
         eval_target: FuncArrayObject = block.eval_targets[i]
@@ -60,6 +80,12 @@ def eval_dup(context: bpy.types.Context, block: FuncArray) -> None:
 
         bpy.data.meshes.remove(e_me)
         bm.free()
+
+    if ivd:
+        for vdblock in ivd:
+            if vdblock.id == ob:
+                vdblock.id = target
+
     bpy.data.objects.remove(ob)
     block.controller = ctr
 
@@ -76,6 +102,9 @@ def deform_update(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgraph) -> Non
     if index < 0 or not farray:
         return
 
+    updates: list[bpy.types.DepsgraphUpdate] = depsgraph.updates
+    ids = [u.id.original for u in updates]
+
     for block in farray:
         if not block.is_activate:
             continue
@@ -83,12 +112,18 @@ def deform_update(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgraph) -> Non
         if block.mute:
             continue
 
-        deg = [d for i, d in _FUNCARRAY_DEPSGRAPHS if i == block.index]
-        if not deg:
-            continue
-        deg = deg[0]
-
-        if not deg.updates:
+        ivd: Union[list[virtual_driver.InternalVirtualDriver], None] = getattr(block, virtual_driver.InternalVirtualDriver.identifier, None)
+        if not ivd:
             continue
 
         eval_dup(bpy.context, block)
+
+        # deg = [d for i, d in _FUNCARRAY_DEPSGRAPHS if i == block.index]
+        # if not deg:
+        #     continue
+        # deg = deg[0]
+
+        # if not deg.updates:
+        #     continue
+
+        # eval_dup(bpy.context, block)

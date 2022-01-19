@@ -39,27 +39,18 @@ class FuncArray(bpy.types.PropertyGroup):
     )
 
     def controller_update(self, context: bpy.types.Context) -> None:
-        if self.controller > self.ctr_max:
+        if self.ctr_min < self.controller and self.ctr_max < self.controller:
             self.controller = self.ctr_max
-        if self.ctr_min > self.controller:
+        if self.controller < self.ctr_min and self.controller < self.ctr_max:
             self.controller = self.ctr_min
     controller: bpy.props.FloatProperty(
         update=controller_update
-        # min=0.0,
-        # max=1.0
     )
-    # def ctr_update(self, context):
-    #     self.__class__.controller = bpy.props.FloatProperty(
-    #         min=self.ctr_min,
-    #         max=self.ctr_max
-    #     )
     ctr_min: bpy.props.FloatProperty(
-        default=0.0,
-        # update=ctr_update
+        default=0.0
     )
     ctr_max: bpy.props.FloatProperty(
-        default=1.0,
-        # update=ctr_update
+        default=1.0
     )
 
     trg_co: bpy.props.PointerProperty(type=bpy.types.Collection)

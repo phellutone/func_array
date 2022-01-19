@@ -2,6 +2,7 @@
 import bpy
 from .properties import FuncArray, FuncArrayIndex, _FUNCARRAY_DEPSGRAPHS
 from .handlers import eval_dup, eval_obj_init
+from .virtual_driver import virtual_driver
 
 
 
@@ -99,3 +100,9 @@ class FUNCARRAY_OT_activation(bpy.types.Operator):
             block.is_activate = True
             eval_dup(context, block)
             return {'FINISHED'}
+
+class FUNCARRAY_OT_VD_add(virtual_driver.VIRTUALDRIVER_OT_add):
+    bl_idname = 'func_array.virtual_driver_add'
+
+class FUNCARRAY_OT_VD_remove(virtual_driver.VIRTUALDRIVER_OT_remove):
+    bl_idname = 'func_array.virtual_driver_remove'

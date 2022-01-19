@@ -59,3 +59,4 @@ class OBJECT_PT_FuncArray(bpy.types.Panel):
 
 class OBJECT_PT_FuncArrayVD(virtual_driver.OBJECT_PT_VirtualDriver):
     bl_parent_id = OBJECT_PT_FuncArray.bl_idname
+    bl_options = set()
