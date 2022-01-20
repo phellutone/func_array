@@ -10,13 +10,29 @@ from .virtual_driver import virtual_driver
 _FUNCARRAY_UPDATE_LOCK = False
 
 
-def favd_access_context(context: bpy.types.Context) -> bpy.types.bpy_struct:
-    return favd_access_id(context.scene)
+def favd_access_context(
+    context: bpy.types.Context,
+    require_all: bool
+) -> Union[
+    bpy.types.bpy_struct,
+    list[bpy.types.bpy_struct],
+    None
+]:
+    return favd_access_id(context.scene, require_all)
 
-def favd_access_id(id: bpy.types.ID) -> bpy.types.bpy_struct:
+def favd_access_id(
+    id: bpy.types.ID,
+    require_all: bool
+) -> Union[
+    bpy.types.bpy_struct,
+    list[bpy.types.bpy_struct],
+    None
+]:
     farray: Union[list[FuncArray], None] = getattr(id, FuncArray.identifier, None)
     if not farray:
         return
+    if require_all:
+        return farray
     index: Union[int, None] = getattr(id, FuncArrayIndex.identifier, None)
     if index is None:
         return

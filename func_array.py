@@ -1,5 +1,4 @@
 
-from typing import Union
 import bpy
 from .properties import FuncArray, FuncArrayDummy, FuncArrayObject, FuncArrayIndex
 from .operators import FUNCARRAY_OT_VD_remove, FUNCARRAY_OT_add, FUNCARRAY_OT_remove, FUNCARRAY_OT_activation, FUNCARRAY_OT_VD_add
