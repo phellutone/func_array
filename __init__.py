@@ -1,5 +1,5 @@
 
-# master/develop
+# master/develop/feature/inner-variable
 
 bl_info = {
     'name': 'func array',
