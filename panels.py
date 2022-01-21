@@ -1,5 +1,6 @@
 
 import bpy
+from .operators import FUNCARRAY_OT_activation, FUNCARRAY_OT_add, FUNCARRAY_OT_remove
 from .properties import FuncArray, FuncArrayIndex
 
 
@@ -27,10 +28,18 @@ class OBJECT_PT_FuncArray(bpy.types.Panel):
         layout = self.layout
 
         row = layout.row()
-        row.template_list('OBJECT_UL_FuncArray', '', scene, 'func_array', scene, 'active_func_array_index', rows=3)
+        row.template_list(
+            OBJECT_UL_FuncArray.__name__,
+            '',
+            scene,
+            FuncArray.identifier,
+            scene,
+            FuncArrayIndex.identifier,
+            rows=3
+        )
         col = row.column(align=True)
-        col.operator('func_array.add', icon='ADD', text='')
-        col.operator('func_array.remove', icon='REMOVE', text='')
+        col.operator(FUNCARRAY_OT_add.bl_idname, icon='ADD', text='')
+        col.operator(FUNCARRAY_OT_remove.bl_idname, icon='REMOVE', text='')
 
         farray: list[FuncArray] = getattr(scene, FuncArray.identifier)
         if farray:
@@ -41,9 +50,9 @@ class OBJECT_PT_FuncArray(bpy.types.Panel):
 
             row = col.row()
             if block.is_activate:
-                row.operator('func_array.activation', text='deactivate', icon='PAUSE')
+                row.operator(FUNCARRAY_OT_activation.bl_idname, text='Deactivate', icon='PAUSE')
             else:
-                row.operator('func_array.activation', text='activate', icon='PLAY')
+                row.operator(FUNCARRAY_OT_activation.bl_idname, text='Activate', icon='PLAY')
 
             box = col.box().column()
             boc = box.column()
@@ -51,7 +60,7 @@ class OBJECT_PT_FuncArray(bpy.types.Panel):
             box.prop(block, 'count', text='Count')
 
             row = box.row(align=True)
-            row.prop(block, 'ctr_max', text='max')
-            row.prop(block, 'ctr_min', text='min')
+            row.prop(block, 'ctr_min', text='Min')
+            row.prop(block, 'ctr_max', text='Max')
 
             box.prop(block, 'controller')

@@ -8,9 +8,25 @@ from .handlers import deform_update
 
 
 paths = {
-    FuncArray.identifier: (bpy.types.Scene, bpy.props.CollectionProperty(type=FuncArray)),
-    FuncArrayIndex.identifier: (bpy.types.Scene, bpy.props.IntProperty()),
-    FuncArrayDummy.identifier: (bpy.types.Object, bpy.props.BoolProperty())
+    FuncArray.identifier: (
+        bpy.types.Scene,
+        bpy.props.CollectionProperty(
+            name='Func Array',
+            type=FuncArray
+        )
+    ),
+    FuncArrayIndex.identifier: (
+        bpy.types.Scene,
+        bpy.props.IntProperty(
+            name='Active Func Array Index'
+        )
+    ),
+    FuncArrayDummy.identifier: (
+        bpy.types.Object,
+        bpy.props.BoolProperty(
+            name='Is Func Array Dummy'
+        )
+    )
 }
 
 classes = (

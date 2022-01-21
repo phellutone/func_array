@@ -9,30 +9,43 @@ _FUNCARRAY_DEPSGRAPHS: list[tuple[int, bpy.types.Depsgraph]] = []
 class FuncArrayObject(bpy.types.PropertyGroup):
     identifier = 'func_array_object'
 
-    index: bpy.props.IntProperty()
-    is_activate: bpy.props.BoolProperty()
-    is_computing: bpy.props.BoolProperty()
-    is_evaluated: bpy.props.BoolProperty()
-    object: bpy.props.PointerProperty(type=bpy.types.Object)
+    object: bpy.props.PointerProperty(
+        name='Object',
+        type=bpy.types.Object
+    )
 
 class FuncArray(bpy.types.PropertyGroup):
     identifier = 'func_array'
 
-    index: bpy.props.IntProperty()
-    name: bpy.props.StringProperty()
-    mute: bpy.props.BoolProperty(default=False)
+    index: bpy.props.IntProperty(
+        name='Index'
+    )
+    name: bpy.props.StringProperty(
+        name='Name'
+    )
+    mute: bpy.props.BoolProperty(
+        name='Mute',
+        default=False
+    )
 
-    is_activate: bpy.props.BoolProperty()
+    is_activate: bpy.props.BoolProperty(
+        name='Is Activate'
+    )
 
     def target_poll(self, object: bpy.types.Object) -> bool:
         return object.type == 'MESH' and not object.is_func_array_dummy
     target: bpy.props.PointerProperty(
+        name='Target',
         type=bpy.types.Object,
         poll=target_poll
     )
-    eval_targets: bpy.props.CollectionProperty(type=FuncArrayObject)
+    eval_targets: bpy.props.CollectionProperty(
+        name='Evaluate Targets',
+        type=FuncArrayObject
+    )
 
     count: bpy.props.IntProperty(
+        name='Count',
         min=1,
         default=1,
         soft_max=25
@@ -44,17 +57,26 @@ class FuncArray(bpy.types.PropertyGroup):
         if self.controller < self.ctr_min and self.controller < self.ctr_max:
             self.controller = self.ctr_min
     controller: bpy.props.FloatProperty(
+        name='Controller',
         update=controller_update
     )
     ctr_min: bpy.props.FloatProperty(
+        name='Min',
         default=0.0
     )
     ctr_max: bpy.props.FloatProperty(
+        name='Max',
         default=1.0
     )
 
-    trg_co: bpy.props.PointerProperty(type=bpy.types.Collection)
-    trg_ob: bpy.props.PointerProperty(type=bpy.types.Object)
+    trg_co: bpy.props.PointerProperty(
+        name='Collection',
+        type=bpy.types.Collection
+    )
+    trg_ob: bpy.props.PointerProperty(
+        name='Instance Object',
+        type=bpy.types.Object
+    )
 
 class FuncArrayIndex:
     identifier = 'active_func_array_index'
