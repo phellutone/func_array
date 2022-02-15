@@ -3,8 +3,6 @@ import bpy
 
 
 
-_FUNCARRAY_DEPSGRAPHS: list[tuple[int, bpy.types.Depsgraph]] = []
-
 
 class FuncArrayObject(bpy.types.PropertyGroup):
     identifier = 'func_array_object'
@@ -16,6 +14,23 @@ class FuncArrayObject(bpy.types.PropertyGroup):
 
 class FuncArray(bpy.types.PropertyGroup):
     identifier = 'func_array'
+
+    def target_poll(self, object: bpy.types.Object) -> bool:
+        return object.type == 'MESH' and not getattr(object, FuncArrayDummy.identifier)
+
+    def controller_update(self, context: bpy.types.Context) -> None:
+        if self.ctr_range < 0:
+            return
+        if self.ctr_max < self.controller:
+            self.controller = self.ctr_max
+        elif self.controller < self.ctr_min:
+            self.controller = self.ctr_min
+
+    def ctr_range_update(self, context: bpy.types.Context) -> None:
+        if self.ctr_min <= self.ctr_max:
+            self.ctr_range = self.ctr_max-self.ctr_min
+        else:
+            self.ctr_range = -1
 
     index: bpy.props.IntProperty(
         name='Index'
@@ -32,8 +47,6 @@ class FuncArray(bpy.types.PropertyGroup):
         name='Is Activate'
     )
 
-    def target_poll(self, object: bpy.types.Object) -> bool:
-        return object.type == 'MESH' and not object.is_func_array_dummy
     target: bpy.props.PointerProperty(
         name='Target',
         type=bpy.types.Object,
@@ -51,21 +64,23 @@ class FuncArray(bpy.types.PropertyGroup):
         soft_max=25
     )
 
-    def controller_update(self, context: bpy.types.Context) -> None:
-        if self.ctr_min < self.controller and self.ctr_max < self.controller:
-            self.controller = self.ctr_max
-        if self.controller < self.ctr_min and self.controller < self.ctr_max:
-            self.controller = self.ctr_min
     controller: bpy.props.FloatProperty(
         name='Controller',
         update=controller_update
     )
+
     ctr_min: bpy.props.FloatProperty(
         name='Min',
-        default=0.0
+        default=0.0,
+        update=ctr_range_update
     )
     ctr_max: bpy.props.FloatProperty(
         name='Max',
+        default=1.0,
+        update=ctr_range_update
+    )
+    ctr_range: bpy.props.FloatProperty(
+        name='Control Range',
         default=1.0
     )
 

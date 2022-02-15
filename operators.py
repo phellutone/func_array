@@ -1,6 +1,6 @@
 
 import bpy
-from .properties import FuncArray, FuncArrayIndex, _FUNCARRAY_DEPSGRAPHS
+from .properties import FuncArray, FuncArrayIndex
 from .handlers import eval_dup, eval_obj_init
 
 
@@ -55,7 +55,6 @@ class FUNCARRAY_OT_activation(bpy.types.Operator):
     bl_options = {'REGISTER'}
 
     def execute(self, context: bpy.types.Context) -> set[str]:
-        global _FUNCARRAY_DEPSGRAPHS
 
         scene = context.scene
         farray: list[FuncArray] = getattr(scene, FuncArray.identifier)
@@ -72,8 +71,6 @@ class FUNCARRAY_OT_activation(bpy.types.Operator):
             co = block.trg_co
             eval_obj_init(block, 0, co)
             bpy.data.collections.remove(co)
-
-            _FUNCARRAY_DEPSGRAPHS = [(i, d) for i, d in _FUNCARRAY_DEPSGRAPHS if i != index]
 
             block.is_activate = False
             return {'FINISHED'}
@@ -93,8 +90,6 @@ class FUNCARRAY_OT_activation(bpy.types.Operator):
             obj.instance_collection = co
             block.trg_ob = obj
             context.scene.collection.objects.link(obj)
-
-            _FUNCARRAY_DEPSGRAPHS.append((index, context.evaluated_depsgraph_get()))
 
             block.is_activate = True
             eval_dup(context, block)

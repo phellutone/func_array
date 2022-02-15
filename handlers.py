@@ -1,7 +1,7 @@
 
 import bpy
 import bmesh
-from .properties import FuncArray, FuncArrayDummy, FuncArrayIndex, FuncArrayObject, _FUNCARRAY_DEPSGRAPHS
+from .properties import FuncArray, FuncArrayDummy, FuncArrayIndex, FuncArrayObject
 
 
 
@@ -49,7 +49,7 @@ def eval_dup(context: bpy.types.Context, block: FuncArray) -> None:
         if block.count == 1:
             block.controller = block.ctr_min
         else:
-            block.controller = i/(block.count-1)*(block.ctr_max-block.ctr_min)+block.ctr_min
+            block.controller = i/(block.count-1)*block.ctr_range+block.ctr_min
         depsgraph = context.evaluated_depsgraph_get()
         e_ob: bpy.types.Object = ob.evaluated_get(depsgraph)
 
@@ -67,7 +67,7 @@ def eval_dup(context: bpy.types.Context, block: FuncArray) -> None:
 
 @bpy.app.handlers.persistent
 def deform_update(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgraph) -> None:
-    global _FUNCARRAY_UPDATE_LOCK, _FUNCARRAY_DEPSGRAPHS
+    global _FUNCARRAY_UPDATE_LOCK
     if _FUNCARRAY_UPDATE_LOCK:
         return
 
@@ -76,19 +76,20 @@ def deform_update(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgraph) -> Non
     if index < 0 or not farray:
         return
 
+    u: list[bpy.types.DepsgraphUpdate] = depsgraph.updates
+    ids = [id.id.original for id in u]
+
     for block in farray:
         if not block.is_activate:
+            continue
+
+        if block.ctr_range < 0:
             continue
 
         if block.mute:
             continue
 
-        deg = [d for i, d in _FUNCARRAY_DEPSGRAPHS if i == block.index]
-        if not deg:
-            continue
-        deg = deg[0]
-
-        if not deg.updates:
+        if not block.target in ids:
             continue
 
         eval_dup(bpy.context, block)
