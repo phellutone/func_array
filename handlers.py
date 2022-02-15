@@ -63,7 +63,7 @@ def deform_update(scene, depsgraph):
     global _FUNCARRAY_UPDATE_LOCK, _FUNCARRAY_DEPSGRAPHS
     if _FUNCARRAY_UPDATE_LOCK:
         return
-    
+
     farray: list[FuncArray] = scene.func_array
     index: int = scene.active_func_array_index
     if index < 0 or not farray:

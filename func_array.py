@@ -17,7 +17,7 @@ classes = (
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
-    
+
     bpy.types.Scene.func_array = bpy.props.CollectionProperty(type=FuncArray)
     bpy.types.Scene.active_func_array_index = bpy.props.IntProperty()
     bpy.types.Object.is_func_array_dummy = bpy.props.BoolProperty()
@@ -28,7 +28,7 @@ def register():
 def unregister():
     for cls in classes:
         bpy.utils.unregister_class(cls)
-    
+
     del bpy.types.Scene.func_array
     del bpy.types.Scene.active_func_array_index
     del bpy.types.Object.is_func_array_dummy

@@ -74,7 +74,7 @@ class FUNCARRAY_OT_activation(bpy.types.Operator):
         else:
             if block.target is None:
                 return {'CANCELLED'}
-            
+
             co = bpy.data.collections.new('FuncArrayDummy.'+block.target.name)
             block.trg_co = co
 

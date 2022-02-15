@@ -18,7 +18,7 @@ class OBJECT_PT_FuncArray(bpy.types.Panel):
     bl_idname = 'VIEW3D_PT_func_array'
     bl_label = 'Func Array'
     bl_options = {'DEFAULT_CLOSED'}
-    
+
     def draw(self, context):
         scene = context.scene
         layout = self.layout
